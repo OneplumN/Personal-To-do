@@ -10,6 +10,23 @@
 
 ---
 
+## Execution Checklists
+
+Use these checklist documents as the execution boundary for subagents:
+
+1. [2026-04-22-checklist-01-foundation.md](./2026-04-22-checklist-01-foundation.md)
+2. [2026-04-22-checklist-02-domain-and-storage.md](./2026-04-22-checklist-02-domain-and-storage.md)
+3. [2026-04-22-checklist-03-home-and-project-workspace.md](./2026-04-22-checklist-03-home-and-project-workspace.md)
+4. [2026-04-22-checklist-04-task-detail-and-completion.md](./2026-04-22-checklist-04-task-detail-and-completion.md)
+5. [2026-04-22-checklist-05-report-center.md](./2026-04-22-checklist-05-report-center.md)
+
+Recommended execution order:
+- Checklist 01
+- Checklist 02
+- Checklist 03
+- Checklist 04
+- Checklist 05
+
 ### Task 1: Align repository docs with the approved product model
 
 **Files:**
