@@ -19,10 +19,28 @@ The project will become a static frontend app built with React, TypeScript, and 
 
 Tasks and preferences will be stored locally. `IndexedDB` is the primary task store because it is more durable and extensible than `localStorage`. Preferences can also be mirrored in `localStorage` when useful for fast startup behavior such as theme bootstrapping.
 
+The visual system is defined by a root-level `DESIGN.md`. That file becomes the single source of truth for typography, color roles, layout, component styling, interaction tone, and responsive constraints.
+
+## Chosen UI Direction
+
+The approved direction is a **Desk Journal** interpretation of the product:
+- warm, paper-like base surfaces
+- precise and low-noise information hierarchy
+- semantic kanban colors that preserve existing task meaning
+- an archival feeling in the completed column
+
+The style reference is methodological rather than imitative. The project borrows the `DESIGN.md` discipline seen in `awesome-design-md`, while the actual look combines:
+- **Notion-like warmth** for surfaces and reading comfort
+- **Linear-like precision** for spacing and hierarchy
+- **Cal.com-like restraint** for utility surfaces such as settings
+
+This is explicitly **not** a corporate team dashboard and **not** a neon AI interface.
+
 ## Repository Shape
 
 ```text
 Personal-To-do/
+  DESIGN.md
   docs/plans/
   public/
   src/
@@ -129,13 +147,14 @@ Required tests:
 - one or two critical UI flows using React Testing Library
 
 ## Delivery Phases
-1. Bootstrap frontend repository and toolchain
-2. Define domain types and storage repositories
-3. Implement task store and task board UI
-4. Implement preferences and settings
-5. Implement JSON export/import
-6. Re-introduce AI summarization
-7. Polish UX and optional PWA support
+1. Write `DESIGN.md` and lock the visual language
+2. Bootstrap frontend repository and toolchain
+3. Define domain types and storage repositories
+4. Implement task store and task board UI
+5. Implement preferences and settings
+6. Implement JSON export/import
+7. Re-introduce AI summarization
+8. Polish UX and optional PWA support
 
 ## Non-Goals
 - Multi-user support

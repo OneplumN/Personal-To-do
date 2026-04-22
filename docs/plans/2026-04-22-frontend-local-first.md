@@ -4,13 +4,50 @@
 
 **Goal:** Replace the placeholder repository with a single-user local-first frontend implementation of Personal-To-do.
 
-**Architecture:** The app will be rebuilt as a React + TypeScript + Vite SPA. Browser persistence will be isolated behind storage repositories, UI state will live in Zustand stores, and backup/restore will use a versioned JSON snapshot format.
+**Architecture:** The app will be rebuilt as a React + TypeScript + Vite SPA. A root-level `DESIGN.md` defines the visual system first, browser persistence is isolated behind storage repositories, UI state lives in Zustand stores, and backup/restore uses a versioned JSON snapshot format.
 
 **Tech Stack:** React, TypeScript, Vite, Zustand, IndexedDB, localStorage, Vitest, React Testing Library
 
 ---
 
-### Task 1: Bootstrap Project Tooling
+### Task 1: Create the Design System Contract
+
+**Files:**
+- Create: `DESIGN.md`
+- Modify: `README.md`
+
+**Step 1: Write the failing design checklist**
+
+Create a checklist that verifies the project has explicit guidance for:
+- visual theme
+- semantic colors
+- typography
+- component styling
+- motion
+- responsive behavior
+
+**Step 2: Run the verification**
+
+Run: `rg -n "Visual Theme|Color Palette|Typography|Component|Responsive|Agent Prompt" DESIGN.md`
+Expected: FAIL because `DESIGN.md` does not exist yet.
+
+**Step 3: Write minimal implementation**
+
+Add a root-level `DESIGN.md` describing the approved Desk Journal direction: warm paper surfaces, precise hierarchy, semantic kanban colors, restrained utility panels, and archival completed-state treatment.
+
+**Step 4: Run verification to confirm it passes**
+
+Run: `rg -n "Visual Theme|Color Palette|Typography|Component|Responsive|Agent Prompt" DESIGN.md`
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add DESIGN.md README.md
+git commit -m "docs: add project design system contract"
+```
+
+### Task 2: Bootstrap Project Tooling
 
 **Files:**
 - Create: `package.json`
@@ -48,7 +85,7 @@ git add package.json tsconfig.json tsconfig.node.json vite.config.ts .gitignore 
 git commit -m "feat: bootstrap local-first frontend app"
 ```
 
-### Task 2: Define Domain Types and Constants
+### Task 3: Define Domain Types and Constants
 
 **Files:**
 - Create: `src/types/task.ts`
@@ -81,7 +118,7 @@ git add src/types src/lib/constants.ts src/tests/domain.test.ts
 git commit -m "feat: add domain model definitions"
 ```
 
-### Task 3: Implement Local Persistence Layer
+### Task 4: Implement Local Persistence Layer
 
 **Files:**
 - Create: `src/lib/storage/db.ts`
@@ -114,7 +151,7 @@ git add src/lib/storage src/tests/storage.test.ts
 git commit -m "feat: add browser persistence repositories"
 ```
 
-### Task 4: Build Task Store and Task Actions
+### Task 5: Build Task Store and Task Actions
 
 **Files:**
 - Create: `src/features/tasks/taskStore.ts`
@@ -146,7 +183,7 @@ git add src/features/tasks src/tests/taskStore.test.ts
 git commit -m "feat: add local task state management"
 ```
 
-### Task 5: Build Preferences and Settings Store
+### Task 6: Build Preferences and Settings Store
 
 **Files:**
 - Create: `src/features/preferences/preferenceStore.ts`
@@ -178,7 +215,7 @@ git add src/features/preferences src/features/settings src/tests/preferences.tes
 git commit -m "feat: add local preferences and settings"
 ```
 
-### Task 6: Build the Kanban UI
+### Task 7: Build the Kanban UI
 
 **Files:**
 - Create: `src/components/TaskCard.tsx`
@@ -212,7 +249,7 @@ git add src/components src/app/App.tsx src/tests/board.test.tsx
 git commit -m "feat: build local kanban board interface"
 ```
 
-### Task 7: Add JSON Export and Import
+### Task 8: Add JSON Export and Import
 
 **Files:**
 - Create: `src/lib/export/exportSnapshot.ts`
@@ -245,7 +282,7 @@ git add src/lib/export src/lib/import src/features/settings/ImportExportPanel.ts
 git commit -m "feat: add local backup and restore support"
 ```
 
-### Task 8: Re-introduce Optional AI Summaries
+### Task 9: Re-introduce Optional AI Summaries
 
 **Files:**
 - Create: `src/lib/ai/polishCompletedTasks.ts`
@@ -278,7 +315,7 @@ git add src/lib/ai src/features/settings/SettingsDialog.tsx src/app/App.tsx src/
 git commit -m "feat: restore optional AI summarization"
 ```
 
-### Task 9: Final Cleanup and Documentation
+### Task 10: Final Cleanup and Documentation
 
 **Files:**
 - Modify: `README.md`
