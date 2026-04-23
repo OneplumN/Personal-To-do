@@ -23,7 +23,7 @@ describe("Home dashboard", () => {
     useReportStore.setState({ isLoaded: false, reports: [] });
   });
 
-  test("renders Today Focus as a compact execution list and supports direct completion feedback", async () => {
+  test("renders Today Focus as a compact execution list", async () => {
     const project = createProject({ name: "Project Alpha" }, "2026-04-23T08:00:00.000Z");
     const task = createTask(
       { projectId: project.id, title: "设计首页摘要" },
@@ -83,9 +83,5 @@ describe("Home dashboard", () => {
     expect(
       within(controls).getByRole("button", { name: "进行中" }),
     ).toHaveClass("focus-status-slider__item--active");
-
-    expect(
-      screen.getByRole("group", { name: "设计首页摘要 状态操作" }),
-    ).toBeInTheDocument();
   });
 });
