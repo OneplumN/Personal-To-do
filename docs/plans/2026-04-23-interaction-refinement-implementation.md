@@ -15,6 +15,7 @@
 1. [2026-04-23-checklist-01-focus-list.md](./2026-04-23-checklist-01-focus-list.md)
 2. [2026-04-23-checklist-02-project-workspace-board.md](./2026-04-23-checklist-02-project-workspace-board.md)
 3. [2026-04-23-checklist-03-settings-drawer.md](./2026-04-23-checklist-03-settings-drawer.md)
+4. [2026-04-23-checklist-04-today-focus-v2.md](./2026-04-23-checklist-04-today-focus-v2.md)
 
 Recommended order:
 - Checklist 01

@@ -77,7 +77,9 @@ export function HomePage() {
 
   function handleQuickStatus(taskId: string, status: TaskStatus) {
     if (status === "done") {
-      openTask(taskId, "complete");
+      void setTaskStatus(taskId, "done").then(() => {
+        void removeFocusTask(taskId);
+      });
       return;
     }
     void setTaskStatus(taskId, status);

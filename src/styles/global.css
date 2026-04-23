@@ -199,7 +199,6 @@ select {
 .task-workspace-header,
 .detail-section__header,
 .project-card__header,
-.focus-item__body,
 .task-list-row,
 .modal__header,
 .modal__actions,
@@ -327,11 +326,10 @@ select {
   gap: 12px;
 }
 
-.focus-list--dense {
+.focus-list--compact {
   gap: 10px;
 }
 
-.focus-item,
 .progress-log__item {
   background: #fff;
   border: 1px solid #e7e0d4;
@@ -341,47 +339,134 @@ select {
   padding: 16px;
 }
 
-.focus-item__row {
-  align-items: flex-start;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+.focus-row {
+  overflow: hidden;
+  position: relative;
 }
 
-.focus-item__identity {
-  display: grid;
-  gap: 6px;
+.focus-row__background {
+  align-items: center;
+  bottom: 0;
+  color: #fff;
+  display: flex;
+  font-weight: 600;
+  padding: 0 18px;
+  position: absolute;
+  top: 0;
+  width: 44%;
 }
 
-.focus-item__identity h3 {
-  margin: 0;
+.focus-row__background--left {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  justify-content: flex-start;
+  left: 0;
 }
 
-.focus-item__controls {
+.focus-row__background--right {
+  background: linear-gradient(90deg, #10b981, #059669);
+  justify-content: flex-end;
+  right: 0;
+}
+
+.focus-row__sheet {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #e7e0d4;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(17, 25, 40, 0.06);
+  cursor: pointer;
   display: grid;
   gap: 10px;
+  padding: 14px 16px;
+  position: relative;
+  transition: transform 160ms ease;
+  z-index: 1;
 }
 
-.focus-item__meta {
+.focus-row__header,
+.focus-row__meta {
   align-items: center;
   display: flex;
   gap: 10px;
+}
+
+.focus-row__header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.focus-row__meta {
+  color: #6b7280;
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  font-size: 0.78rem;
   justify-content: space-between;
 }
 
-.focus-item__project {
-  color: #6b7280;
-  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
-  font-size: 0.82rem;
+.focus-status-slider {
+  background: #fff8ec;
+  border-radius: 999px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 4px;
 }
 
-.focus-item h3,
+.focus-status-slider__item {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: #30405a;
+  padding: 8px 10px;
+}
+
+.focus-status-slider__item--active {
+  background: #111928;
+  color: #f9f6f0;
+}
+
+.priority-badge-wrap {
+  position: relative;
+}
+
+.priority-pill--button {
+  border: 0;
+  cursor: pointer;
+}
+
+.priority-menu {
+  background: #fff;
+  border: 1px solid #e7e0d4;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(17, 25, 40, 0.12);
+  display: grid;
+  gap: 4px;
+  left: 0;
+  min-width: 88px;
+  padding: 6px;
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 4;
+}
+
+.priority-menu__item {
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: #30405a;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.priority-menu__item--active {
+  background: #fff8ec;
+  color: #111928;
+}
+
 .task-list-row h3,
-.task-card h4 {
+.task-card h4,
+.focus-row__header h3 {
   margin: 0 0 6px;
 }
 
-.focus-item p,
 .task-list-row p,
 .task-card p,
 .project-hero p,
@@ -390,21 +475,11 @@ select {
   margin: 0;
 }
 
-.focus-item__actions,
 .task-list-row__meta,
 .project-hero__metrics,
 .task-detail__meta,
-.segmented-control,
-.focus-item__actions {
+.segmented-control {
   align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.focus-item__summary {
-  align-items: center;
-  color: #30405a;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -619,8 +694,7 @@ select {
 .field input,
 .field textarea,
 .inline-form input,
-.inline-form textarea,
-.focus-item__actions select {
+.inline-form textarea {
   background: #fff;
   border: 1px solid #d8d2c7;
   border-radius: 16px;
@@ -850,8 +924,7 @@ button {
   }
 
   .task-list-row,
-  .focus-item__body,
-  .focus-item__row,
+  .focus-row__meta,
   .section-heading,
   .task-workspace-header,
   .modal__header,

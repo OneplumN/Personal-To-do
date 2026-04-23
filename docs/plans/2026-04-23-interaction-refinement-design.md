@@ -28,6 +28,9 @@ No new product objects are introduced in this round.
 ### Current problem
 Today Focus currently feels like task cards with indirect actions. This increases friction for the highest-frequency area of the product.
 
+This section has now been refined further. See:
+- [2026-04-23-today-focus-v2-design.md](./2026-04-23-today-focus-v2-design.md)
+
 ### Approved direction
 Today Focus becomes a **compact actionable list**.
 

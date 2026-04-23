@@ -112,11 +112,20 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     if (!task) {
       return null;
     }
+    const now = new Date().toISOString();
     const nextTask: Task = {
       ...task,
-      completionWrapUp: status === "done" ? task.completionWrapUp : null,
+      completionWrapUp:
+        status === "done"
+          ? task.completionWrapUp ?? {
+              completedAt: now,
+              keyChanges: "",
+              notes: "",
+              summary: "",
+            }
+          : null,
       status,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
