@@ -1,10 +1,10 @@
-# Today Focus V2 Implementation Plan
+# Today Focus V3 Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Refactor Today Focus into a compact execution list with segmented status control, lightweight priority badges, and swipe shortcuts for complete/remove.
+**Goal:** Refactor Today Focus into a compact execution list with lightweight status control, priority badges, and swipe-first complete/remove behavior.
 
-**Architecture:** The change is intentionally local to Today Focus plus any required task-domain support for direct completion. Rows become compact list items, status changes are handled through a segmented control, priority becomes a compact menu trigger, and swipe gestures act as shortcuts while preserving click-based accessibility fallbacks.
+**Architecture:** The change is intentionally local to Today Focus plus any required task-domain support for direct completion. Rows become compact list items, status changes are handled through a segmented control that excludes `完成`, priority becomes a compact menu trigger, and swipe gestures become the primary shortcut for `完成` and `移出焦点`. The user should recover through lightweight post-action feedback, not blocking confirmation dialogs.
 
 **Tech Stack:** React, TypeScript, Zustand, CSS interactions, Vitest, React Testing Library, MCP browser validation
 
@@ -14,7 +14,7 @@
 
 1. [2026-04-23-checklist-04-today-focus-v2.md](./2026-04-23-checklist-04-today-focus-v2.md)
 
-### Task 1: Support direct completion without forced wrap-up
+### Task 1: Support direct completion with non-blocking recovery
 
 **Files:**
 - Modify: `src/types/task.ts`
@@ -27,6 +27,7 @@
 Cover:
 - direct completion creates a usable completed task state
 - direct completion still leaves the task eligible for reporting
+- completion can be followed by non-blocking recovery
 
 **Step 2: Run test to verify it fails**
 
@@ -35,7 +36,7 @@ Expected: FAIL because direct completion behavior is not explicitly supported.
 
 **Step 3: Write minimal implementation**
 
-Ensure status changes to `done` can happen without a blocking completion form while still creating completion metadata sufficient for reports.
+Ensure status changes to `done` can happen without a blocking completion form while still creating completion metadata sufficient for reports, and expose the UI state needed for undo feedback.
 
 **Step 4: Run test to verify it passes**
 
@@ -49,7 +50,7 @@ git add src/types/task.ts src/features/tasks/taskStore.ts src/tests/domain.test.
 git commit -m "feat: support direct completion in today focus"
 ```
 
-### Task 2: Rebuild Today Focus rows
+### Task 2: Rebuild Today Focus rows around compact list behavior
 
 **Files:**
 - Modify: `src/components/focus/FocusList.tsx`
@@ -61,7 +62,7 @@ git commit -m "feat: support direct completion in today focus"
 
 Cover:
 - compact list row structure
-- segmented status control
+- segmented status control excludes `完成`
 - lightweight priority trigger
 - row click opens detail
 
@@ -76,8 +77,9 @@ Refactor Today Focus into:
 - compact list rows
 - header priority badge
 - support line
-- status slider row
+- status slider row with only `待做 / 进行中 / 阻塞`
 - no large visible action button cluster
+- no equal-weight complete button
 
 **Step 4: Run test to verify it passes**
 
@@ -91,7 +93,7 @@ git add src/components/focus/FocusList.tsx src/features/home/HomePage.tsx src/st
 git commit -m "feat: rebuild today focus as execution list"
 ```
 
-### Task 3: Add swipe shortcuts and final validation
+### Task 3: Add swipe shortcuts, undo feedback, and final validation
 
 **Files:**
 - Modify: `src/components/focus/FocusList.tsx`
@@ -103,6 +105,7 @@ git commit -m "feat: rebuild today focus as execution list"
 Define checks for:
 - drag right preview for complete
 - drag left preview for remove
+- non-blocking post-action feedback exists
 - fallback click controls still work
 
 **Step 2: Run test to verify it fails**
@@ -117,6 +120,7 @@ Add horizontal drag gesture handling with thresholds:
 - left = remove from focus
 
 Keep row click, status slider, and priority trigger as fallback controls.
+Add lightweight undo/recovery feedback instead of confirmation dialogs.
 
 **Step 4: Run verification**
 
@@ -136,4 +140,3 @@ Verify in browser:
 - clicking status segment updates state
 - drag right completes task
 - drag left removes task from focus
-

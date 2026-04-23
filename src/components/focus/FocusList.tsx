@@ -3,7 +3,6 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_ORDER,
   TASK_STATUS_LABELS,
-  TASK_STATUS_ORDER,
 } from "../../lib/constants";
 import type { Project } from "../../types/project";
 import type { Task, TaskPriority, TaskStatus } from "../../types/task";
@@ -15,6 +14,7 @@ export type FocusListItem = {
 
 const SWIPE_THRESHOLD = 88;
 const SWIPE_PREVIEW_LIMIT = 116;
+const TODAY_FOCUS_STATUS_ORDER: TaskStatus[] = ["todo", "in_progress", "blocked"];
 
 function FocusPriorityBadge({
   onChangePriority,
@@ -189,7 +189,7 @@ function FocusRow({
           data-focus-control="true"
           role="group"
         >
-          {TASK_STATUS_ORDER.map((status) => (
+          {TODAY_FOCUS_STATUS_ORDER.map((status) => (
             <button
               className={
                 task.status === status

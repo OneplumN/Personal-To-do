@@ -9,19 +9,27 @@ import { Modal } from "../../components/common/Modal";
 import { TaskDetailPanel } from "../../components/tasks/TaskDetailPanel";
 import type { TaskPriority, TaskStatus } from "../../types/task";
 
+type UndoState =
+  | { taskId: string; type: "complete" }
+  | { taskId: string; type: "remove" }
+  | null;
+
 export function HomePage() {
   const navigate = useNavigate();
   const projects = useProjectStore((state) => state.projects);
   const createProject = useProjectStore((state) => state.createProject);
   const tasks = useTaskStore((state) => state.tasks);
+  const loadTasks = useTaskStore((state) => state.loadTasks);
   const setTaskStatus = useTaskStore((state) => state.setStatus);
   const setTaskPriority = useTaskStore((state) => state.setPriority);
+  const addFocusTask = useFocusStore((state) => state.addTask);
   const focusRefs = useFocusStore((state) => state.focusRefs);
   const removeFocusTask = useFocusStore((state) => state.removeTask);
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [detailMode, setDetailMode] = useState<"complete" | "view">("view");
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [undoState, setUndoState] = useState<UndoState>(null);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
 
@@ -79,6 +87,7 @@ export function HomePage() {
     if (status === "done") {
       void setTaskStatus(taskId, "done").then(() => {
         void removeFocusTask(taskId);
+        setUndoState({ taskId, type: "complete" });
       });
       return;
     }
@@ -87,6 +96,22 @@ export function HomePage() {
 
   function handlePriorityChange(taskId: string, priority: TaskPriority) {
     void setTaskPriority(taskId, priority);
+  }
+
+  async function handleUndo() {
+    if (!undoState) {
+      return;
+    }
+
+    if (undoState.type === "remove") {
+      await addFocusTask(undoState.taskId);
+    } else {
+      await setTaskStatus(undoState.taskId, "blocked");
+      await addFocusTask(undoState.taskId);
+      await loadTasks();
+    }
+
+    setUndoState(null);
   }
 
   return (
@@ -102,10 +127,30 @@ export function HomePage() {
           items={focusItems}
           onChangePriority={handlePriorityChange}
           onOpenTask={(taskId) => openTask(taskId, "view")}
-          onRemoveTask={removeFocusTask}
+          onRemoveTask={(taskId) => {
+            void removeFocusTask(taskId).then(() => {
+              setUndoState({ taskId, type: "remove" });
+            });
+          }}
           onUpdateStatus={handleQuickStatus}
         />
       </section>
+
+      {undoState ? (
+        <div className="toast">
+          <span>
+            {undoState.type === "complete" ? "任务已完成" : "任务已移出今日焦点"}
+          </span>
+          <button className="ghost-button" onClick={() => void handleUndo()} type="button">
+            撤销
+          </button>
+          {undoState.type === "complete" ? (
+            <button onClick={() => openTask(undoState.taskId, "view")} type="button">
+              补充说明
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <section className="dashboard-section">
         <div className="section-heading">
