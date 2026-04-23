@@ -20,7 +20,7 @@
 ## Checklist
 - [ ] Support direct task completion without a forced completion modal
 - [ ] Keep completed tasks reportable after direct completion
-- [ ] Rebuild each focus item as a compact list row
+- [ ] Rebuild each focus item as a single-line execution row
 - [ ] Move priority into the row header as a small badge/trigger
 - [ ] Replace the current status controls with a segmented slider-style control
 - [ ] Keep the segmented control limited to `待做 / 进行中 / 阻塞`

@@ -24,19 +24,15 @@ The user should be able to:
 ## Approved Interaction Model
 
 ### Layout
-Each Today Focus item becomes a compact list row with three layers:
+Each Today Focus item becomes a **single-line execution row**:
 
-1. header:
-   - priority badge
-   - task title
-2. support line:
-   - project name
-   - recent update time
-3. status control line:
-   - segmented status slider
+- left: priority badge
+- middle: `项目名 - 任务名`
+- right: compact status control
 
 No large card body.
 No oversized action button cluster.
+No default secondary text line.
 
 ### Priority
 Priority is displayed as a **small badge in the task header**.
@@ -109,15 +105,11 @@ Fallback path:
 - subtle remove affordance if needed, but secondary and visually quiet
 
 ## Row Composition
-Each row should contain:
+Each row should contain only:
 
-1. header
-   - priority badge
-   - task title
-2. support line
-   - project name
-   - recent update time
-3. compact state control
+1. priority badge
+2. `项目名 - 任务名`
+3. compact state control:
    - `待做`
    - `进行中`
    - `阻塞`
@@ -126,6 +118,7 @@ It should **not** contain:
 - large action buttons like `打开` and `移出`
 - equal-weight `完成` button
 - large descriptive card body
+- default second-line timestamp or project meta text
 
 ## Out of Scope
 - changes to Project Workspace in this round

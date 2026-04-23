@@ -4,7 +4,7 @@
 
 **Goal:** Refactor Today Focus into a compact execution list with lightweight status control, priority badges, and swipe-first complete/remove behavior.
 
-**Architecture:** The change is intentionally local to Today Focus plus any required task-domain support for direct completion. Rows become compact list items, status changes are handled through a segmented control that excludes `完成`, priority becomes a compact menu trigger, and swipe gestures become the primary shortcut for `完成` and `移出焦点`. The user should recover through lightweight post-action feedback, not blocking confirmation dialogs.
+**Architecture:** The change is intentionally local to Today Focus plus any required task-domain support for direct completion. Rows become single-line execution items, status changes are handled through a segmented control that excludes `完成`, priority becomes a compact menu trigger, and swipe gestures become the primary shortcut for `完成` and `移出焦点`. The user should recover through lightweight post-action feedback, not blocking confirmation dialogs.
 
 **Tech Stack:** React, TypeScript, Zustand, CSS interactions, Vitest, React Testing Library, MCP browser validation
 
@@ -61,7 +61,7 @@ git commit -m "feat: support direct completion in today focus"
 **Step 1: Write the failing test**
 
 Cover:
-- compact list row structure
+- single-line row structure
 - segmented status control excludes `完成`
 - lightweight priority trigger
 - row click opens detail
@@ -74,10 +74,10 @@ Expected: FAIL because the current Today Focus interaction model is different.
 **Step 3: Write minimal implementation**
 
 Refactor Today Focus into:
-- compact list rows
-- header priority badge
-- support line
-- status slider row with only `待做 / 进行中 / 阻塞`
+- single-line execution rows
+- priority badge
+- `项目名 - 任务名`
+- compact state control with only `待做 / 进行中 / 阻塞`
 - no large visible action button cluster
 - no equal-weight complete button
 
