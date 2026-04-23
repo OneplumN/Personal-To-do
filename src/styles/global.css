@@ -14,6 +14,9 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --lane-task: #ffb347;
+  --lane-doing: #5ac8fa;
+  --lane-done: #34d399;
 }
 
 * {
@@ -28,7 +31,16 @@ body,
 }
 
 body {
+  background-color: #f9f6f0;
   min-height: 100vh;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(90, 200, 250, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(52, 211, 153, 0.16), transparent 24%),
+    #020617;
+  color: #e2e8f0;
 }
 
 a {
@@ -48,6 +60,10 @@ select {
   max-width: 1440px;
   min-height: 100vh;
   padding: 32px;
+}
+
+.app-shell--dark {
+  color: #e2e8f0;
 }
 
 .app-header {
@@ -110,6 +126,13 @@ select {
     background-color 160ms ease,
     color 160ms ease,
     transform 160ms ease;
+}
+
+.app-nav__button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .app-nav__link:hover {
@@ -389,11 +412,11 @@ select {
 }
 
 .task-column--todo {
-  background: #ffeec5;
+  background: color-mix(in srgb, var(--lane-task) 18%, white);
 }
 
 .task-column--in_progress {
-  background: #e8f7ff;
+  background: color-mix(in srgb, var(--lane-doing) 18%, white);
 }
 
 .task-column--blocked {
@@ -401,7 +424,7 @@ select {
 }
 
 .task-column--done {
-  background: #eafbf3;
+  background: color-mix(in srgb, var(--lane-done) 18%, white);
 }
 
 .task-column__header {
@@ -540,12 +563,12 @@ select {
 }
 
 .status-pill--todo {
-  background: #ffeec5;
+  background: color-mix(in srgb, var(--lane-task) 22%, white);
   color: #5e3a00;
 }
 
 .status-pill--in_progress {
-  background: #e8f7ff;
+  background: color-mix(in srgb, var(--lane-doing) 22%, white);
   color: #0369a1;
 }
 
@@ -555,8 +578,29 @@ select {
 }
 
 .status-pill--done {
-  background: #eafbf3;
+  background: color-mix(in srgb, var(--lane-done) 22%, white);
   color: #0f5a39;
+}
+
+.settings-dialog,
+.settings-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-message {
+  color: #30405a;
+  margin: 0;
 }
 
 .empty-state {
@@ -660,7 +704,8 @@ button {
   .task-board,
   .project-card__stats,
   .project-hero__metrics,
-  .report-editor__grid {
+  .report-editor__grid,
+  .settings-grid {
     grid-template-columns: 1fr;
   }
 
