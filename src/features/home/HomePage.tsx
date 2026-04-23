@@ -7,6 +7,7 @@ import { FocusList } from "../../components/focus/FocusList";
 import { ProjectCard } from "../../components/projects/ProjectCard";
 import { Modal } from "../../components/common/Modal";
 import { TaskDetailPanel } from "../../components/tasks/TaskDetailPanel";
+import type { TaskPriority, TaskStatus } from "../../types/task";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -14,10 +15,12 @@ export function HomePage() {
   const createProject = useProjectStore((state) => state.createProject);
   const tasks = useTaskStore((state) => state.tasks);
   const setTaskStatus = useTaskStore((state) => state.setStatus);
+  const setTaskPriority = useTaskStore((state) => state.setPriority);
   const focusRefs = useFocusStore((state) => state.focusRefs);
   const removeFocusTask = useFocusStore((state) => state.removeTask);
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [detailMode, setDetailMode] = useState<"complete" | "view">("view");
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
@@ -67,6 +70,23 @@ export function HomePage() {
     navigate(`/projects/${project.id}`);
   }
 
+  function openTask(taskId: string, mode: "complete" | "view" = "view") {
+    setDetailMode(mode);
+    setActiveTaskId(taskId);
+  }
+
+  function handleQuickStatus(taskId: string, status: TaskStatus) {
+    if (status === "done") {
+      openTask(taskId, "complete");
+      return;
+    }
+    void setTaskStatus(taskId, status);
+  }
+
+  function handlePriorityChange(taskId: string, priority: TaskPriority) {
+    void setTaskPriority(taskId, priority);
+  }
+
   return (
     <div className="dashboard-page">
       <section className="dashboard-section">
@@ -78,11 +98,10 @@ export function HomePage() {
         </div>
         <FocusList
           items={focusItems}
-          onOpenTask={setActiveTaskId}
+          onChangePriority={handlePriorityChange}
+          onOpenTask={(taskId) => openTask(taskId, "view")}
           onRemoveTask={removeFocusTask}
-          onUpdateStatus={(taskId, status) => {
-            void setTaskStatus(taskId, status);
-          }}
+          onUpdateStatus={handleQuickStatus}
         />
       </section>
 
@@ -144,8 +163,12 @@ export function HomePage() {
 
       {activeTask && activeTaskProject ? (
         <TaskDetailPanel
-          onClose={() => setActiveTaskId(null)}
+          onClose={() => {
+            setActiveTaskId(null);
+            setDetailMode("view");
+          }}
           project={activeTaskProject}
+          startCompletionFlow={detailMode === "complete"}
           taskId={activeTask.id}
         />
       ) : null}

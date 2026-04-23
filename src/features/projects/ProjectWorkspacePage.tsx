@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { TaskBoardView } from "../../components/tasks/TaskBoardView";
 import { TaskDetailPanel } from "../../components/tasks/TaskDetailPanel";
-import { TaskListView } from "../../components/tasks/TaskListView";
 import { TaskWorkspaceHeader } from "../../components/tasks/TaskWorkspaceHeader";
 import { buildProjectSummary } from "../../types/project";
 import { useProjectStore } from "./projectStore";
 import { useTaskStore } from "../tasks/taskStore";
+import { useFocusStore } from "../focus/focusStore";
+import type { TaskPriority, TaskStatus } from "../../types/task";
 
 export function ProjectWorkspacePage() {
   const { projectId } = useParams();
@@ -14,9 +15,13 @@ export function ProjectWorkspacePage() {
   const projects = useProjectStore((state) => state.projects);
   const tasks = useTaskStore((state) => state.tasks);
   const createTask = useTaskStore((state) => state.createTask);
+  const setTaskStatus = useTaskStore((state) => state.setStatus);
+  const setTaskPriority = useTaskStore((state) => state.setPriority);
+  const focusRefs = useFocusStore((state) => state.focusRefs);
+  const toggleFocusTask = useFocusStore((state) => state.toggleTask);
 
-  const [viewMode, setViewMode] = useState<"board" | "list">("list");
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [detailMode, setDetailMode] = useState<"complete" | "view">("view");
 
   const project = useMemo(
     () => projects.find((item) => item.id === projectId) ?? null,
@@ -28,6 +33,10 @@ export function ProjectWorkspacePage() {
         .filter((task) => task.projectId === projectId)
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
     [projectId, tasks],
+  );
+  const focusTaskIds = useMemo(
+    () => focusRefs.map((item) => item.taskId),
+    [focusRefs],
   );
 
   if (!project) {
@@ -43,6 +52,23 @@ export function ProjectWorkspacePage() {
   }
 
   const summary = buildProjectSummary(project, tasks);
+
+  function openTask(taskId: string, mode: "complete" | "view" = "view") {
+    setDetailMode(mode);
+    setActiveTaskId(taskId);
+  }
+
+  function handleQuickStatus(taskId: string, status: TaskStatus) {
+    if (status === "done") {
+      openTask(taskId, "complete");
+      return;
+    }
+    void setTaskStatus(taskId, status);
+  }
+
+  function handlePriorityChange(taskId: string, priority: TaskPriority) {
+    void setTaskPriority(taskId, priority);
+  }
 
   return (
     <div className="project-workspace">
@@ -74,7 +100,6 @@ export function ProjectWorkspacePage() {
 
       <section className="workspace-section">
         <TaskWorkspaceHeader
-          onChangeViewMode={setViewMode}
           onCreateTask={async (input) => {
             await createTask({
               body: input.body,
@@ -82,20 +107,25 @@ export function ProjectWorkspacePage() {
               title: input.title,
             });
           }}
-          viewMode={viewMode}
         />
-
-        {viewMode === "list" ? (
-          <TaskListView onOpenTask={setActiveTaskId} tasks={projectTasks} />
-        ) : (
-          <TaskBoardView onOpenTask={setActiveTaskId} tasks={projectTasks} />
-        )}
+        <TaskBoardView
+          focusTaskIds={focusTaskIds}
+          onChangePriority={handlePriorityChange}
+          onOpenTask={(taskId) => openTask(taskId, "view")}
+          onToggleFocus={(taskId) => void toggleFocusTask(taskId)}
+          onUpdateStatus={handleQuickStatus}
+          tasks={projectTasks}
+        />
       </section>
 
       {activeTaskId ? (
         <TaskDetailPanel
-          onClose={() => setActiveTaskId(null)}
+          onClose={() => {
+            setActiveTaskId(null);
+            setDetailMode("view");
+          }}
           project={project}
+          startCompletionFlow={detailMode === "complete"}
           taskId={activeTaskId}
         />
       ) : null}

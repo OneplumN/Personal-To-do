@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { TASK_STATUS_LABELS, TASK_STATUS_ORDER } from "../../lib/constants";
 import { useFocusStore } from "../../features/focus/focusStore";
 import { useTaskStore } from "../../features/tasks/taskStore";
+import { TASK_PRIORITY_LABELS, TASK_PRIORITY_ORDER } from "../../lib/constants";
 import type { Project } from "../../types/project";
-import type { TaskStatus } from "../../types/task";
+import type { TaskPriority, TaskStatus } from "../../types/task";
 import { ChecklistEditor } from "./ChecklistEditor";
 import { ProgressLogEditor } from "./ProgressLogEditor";
 import { TaskCompletionDialog } from "./TaskCompletionDialog";
@@ -12,10 +13,12 @@ import { Modal } from "../common/Modal";
 export function TaskDetailPanel({
   onClose,
   project,
+  startCompletionFlow = false,
   taskId,
 }: {
   onClose: () => void;
   project: Project;
+  startCompletionFlow?: boolean;
   taskId: string | null;
 }) {
   const task = useTaskStore((state) =>
@@ -23,6 +26,7 @@ export function TaskDetailPanel({
   );
   const updateTask = useTaskStore((state) => state.updateTask);
   const setStatus = useTaskStore((state) => state.setStatus);
+  const setPriority = useTaskStore((state) => state.setPriority);
   const addChecklistItem = useTaskStore((state) => state.addChecklistItem);
   const toggleChecklistItem = useTaskStore((state) => state.toggleChecklistItem);
   const appendProgressLog = useTaskStore((state) => state.appendProgressLog);
@@ -38,6 +42,12 @@ export function TaskDetailPanel({
     setDraftTitle(task?.title ?? "");
     setDraftBody(task?.body ?? "");
   }, [task?.body, task?.title]);
+
+  useEffect(() => {
+    if (task && startCompletionFlow) {
+      setShowCompletion(true);
+    }
+  }, [startCompletionFlow, task]);
 
   const inFocus = useMemo(
     () => (task ? focusRefs.some((ref) => ref.taskId === task.id) : false),
@@ -80,6 +90,22 @@ export function TaskDetailPanel({
                 {TASK_STATUS_ORDER.map((status) => (
                   <option key={status} value={status}>
                     {TASK_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field field--inline">
+              <span>优先级</span>
+              <select
+                aria-label="优先级"
+                onChange={(event) =>
+                  void setPriority(currentTask.id, event.target.value as TaskPriority)
+                }
+                value={currentTask.priority}
+              >
+                {TASK_PRIORITY_ORDER.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {TASK_PRIORITY_LABELS[priority]}
                   </option>
                 ))}
               </select>

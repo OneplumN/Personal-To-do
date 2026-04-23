@@ -7,6 +7,7 @@ import {
   createTask,
   type Task,
   type TaskCreateInput,
+  type TaskPriority,
   type TaskStatus,
 } from "../../types/task";
 
@@ -24,6 +25,7 @@ type TaskState = {
   isLoaded: boolean;
   loadTasks: () => Promise<Task[]>;
   removeTask: (taskId: string) => Promise<void>;
+  setPriority: (taskId: string, priority: TaskPriority) => Promise<Task | null>;
   setStatus: (taskId: string, status: TaskStatus) => Promise<Task | null>;
   tasks: Task[];
   toggleChecklistItem: (taskId: string, itemId: string) => Promise<Task | null>;
@@ -90,6 +92,20 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   async removeTask(taskId) {
     await taskRepository.delete(taskId);
     set({ tasks: get().tasks.filter((task) => task.id !== taskId) });
+  },
+  async setPriority(taskId, priority) {
+    const task = get().tasks.find((item) => item.id === taskId);
+    if (!task) {
+      return null;
+    }
+    const nextTask: Task = {
+      ...task,
+      priority,
+      updatedAt: new Date().toISOString(),
+    };
+    await taskRepository.save(nextTask);
+    set({ tasks: replaceTask(get().tasks, nextTask) });
+    return nextTask;
   },
   async setStatus(taskId, status) {
     const task = get().tasks.find((item) => item.id === taskId);

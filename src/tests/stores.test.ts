@@ -26,11 +26,13 @@ describe("zustand stores", () => {
 
     await useFocusStore.getState().addTask(task.id);
     await useTaskStore.getState().appendProgressLog(task.id, "补充了范围说明");
+    await useTaskStore.getState().setPriority(task.id, "important");
 
     expect(useFocusStore.getState().focusRefs[0]?.taskId).toBe(task.id);
     expect(useTaskStore.getState().tasks[0]?.progressLog[0]?.content).toBe(
       "补充了范围说明",
     );
+    expect(useTaskStore.getState().tasks[0]?.priority).toBe("important");
   });
 
   test("saves and updates editable reports", async () => {

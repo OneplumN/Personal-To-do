@@ -27,6 +27,17 @@ Recommended execution order:
 - Checklist 04
 - Checklist 05
 
+## Interaction Refinement Round
+
+After the first functional implementation, interaction problems were identified in three high-frequency areas:
+- Today Focus
+- Project Workspace
+- Settings
+
+Follow-up docs:
+- [2026-04-23-interaction-refinement-design.md](./2026-04-23-interaction-refinement-design.md)
+- [2026-04-23-interaction-refinement-implementation.md](./2026-04-23-interaction-refinement-implementation.md)
+
 ### Task 1: Align repository docs with the approved product model
 
 **Files:**

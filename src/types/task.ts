@@ -1,4 +1,5 @@
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
+export type TaskPriority = "normal" | "important" | "urgent";
 
 export type ChecklistItem = {
   id: string;
@@ -25,6 +26,7 @@ export type Task = {
   title: string;
   body: string;
   status: TaskStatus;
+  priority: TaskPriority;
   checklist: ChecklistItem[];
   progressLog: TaskLogEntry[];
   completionWrapUp: TaskCompletionWrapUp | null;
@@ -45,6 +47,7 @@ export function createTask(input: TaskCreateInput, now = new Date().toISOString(
     title: input.title.trim(),
     body: input.body?.trim() ?? "",
     status: "todo",
+    priority: "normal",
     checklist: [],
     progressLog: [],
     completionWrapUp: null,

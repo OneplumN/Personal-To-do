@@ -219,3 +219,13 @@ This avoids false precision while still giving useful visibility on the home scr
 - Task records should accumulate process, not only status
 - Completion should produce reusable reporting material
 - Reports are artifacts, not temporary popups
+
+## Follow-up Interaction Refinement
+
+The first functional implementation surfaced a second-round interaction need. See:
+- [2026-04-23-interaction-refinement-design.md](./2026-04-23-interaction-refinement-design.md)
+
+That refinement round changes:
+- Today Focus into an actionable list
+- Project Workspace into a board-first surface
+- Settings into a right-side drawer

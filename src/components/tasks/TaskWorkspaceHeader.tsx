@@ -2,12 +2,8 @@ import { useState } from "react";
 
 export function TaskWorkspaceHeader({
   onCreateTask,
-  viewMode,
-  onChangeViewMode,
 }: {
-  onChangeViewMode: (mode: "board" | "list") => void;
   onCreateTask: (input: { body: string; title: string }) => Promise<void>;
-  viewMode: "board" | "list";
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState("");
@@ -34,22 +30,6 @@ export function TaskWorkspaceHeader({
         <h2>任务工作区</h2>
       </div>
       <div className="task-workspace-header__actions">
-        <div className="segmented-control" role="tablist">
-          <button
-            className={viewMode === "list" ? "segmented-control__button segmented-control__button--active" : "segmented-control__button"}
-            onClick={() => onChangeViewMode("list")}
-            type="button"
-          >
-            列表
-          </button>
-          <button
-            className={viewMode === "board" ? "segmented-control__button segmented-control__button--active" : "segmented-control__button"}
-            onClick={() => onChangeViewMode("board")}
-            type="button"
-          >
-            看板
-          </button>
-        </div>
         <button onClick={() => setIsCreating((value) => !value)} type="button">
           {isCreating ? "取消" : "+ 新建任务"}
         </button>

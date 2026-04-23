@@ -1,4 +1,5 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import { App } from "../app/App";
 import { focusRepository } from "../lib/storage/focusRepository";
@@ -22,7 +23,7 @@ describe("Home dashboard", () => {
     useReportStore.setState({ isLoaded: false, reports: [] });
   });
 
-  test("renders Today Focus and project overview cards", async () => {
+  test("renders Today Focus as an actionable list", async () => {
     const project = createProject({ name: "Project Alpha" }, "2026-04-23T08:00:00.000Z");
     const task = createTask(
       { projectId: project.id, title: "设计首页摘要" },
@@ -49,13 +50,26 @@ describe("Home dashboard", () => {
       taskId: task.id,
     });
 
+    const user = userEvent.setup();
     renderWithRouter(<App />);
 
     await screen.findByRole("heading", { level: 2, name: "今日焦点" });
     expect(screen.getAllByText("Project Alpha")).toHaveLength(2);
     expect(screen.getByText("设计首页摘要")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "设计首页摘要 状态操作" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("设计首页摘要 优先级")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "阻塞" }));
     await waitFor(() => {
-      expect(screen.getByText("最近完成：")).toBeInTheDocument();
+      const focusRow = screen.getByRole("button", { name: "打开" }).closest(".focus-item");
+      expect(focusRow).not.toBeNull();
+      const controls = within(focusRow as HTMLElement).getByRole("group", {
+        name: "设计首页摘要 状态操作",
+      });
+      expect(
+        within(controls).getByRole("button", { name: "阻塞" }),
+      ).toHaveClass("status-button--active");
       expect(screen.getByText("完成接口梳理")).toBeInTheDocument();
     });
   });

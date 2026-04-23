@@ -1,6 +1,6 @@
 import type { Preferences } from "../types/preferences";
 import type { ReportType } from "../types/report";
-import type { TaskStatus } from "../types/task";
+import type { TaskPriority, TaskStatus } from "../types/task";
 
 export const TASK_STATUS_ORDER: TaskStatus[] = [
   "todo",
@@ -14,6 +14,18 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   done: "已完成",
   in_progress: "进行中",
   todo: "待做",
+};
+
+export const TASK_PRIORITY_ORDER: TaskPriority[] = [
+  "normal",
+  "important",
+  "urgent",
+];
+
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  important: "重要",
+  normal: "普通",
+  urgent: "紧急",
 };
 
 export const REPORT_TYPE_LABELS: Record<ReportType, string> = {

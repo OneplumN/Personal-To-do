@@ -6,7 +6,7 @@ import { usePreferenceStore } from "../preferences/preferenceStore";
 import { useProjectStore } from "../projects/projectStore";
 import { useReportStore } from "../reports/reportStore";
 import { useTaskStore } from "../tasks/taskStore";
-import { Modal } from "../../components/common/Modal";
+import { Drawer } from "../../components/common/Drawer";
 
 export function SettingsDialog({
   onClose,
@@ -65,8 +65,23 @@ export function SettingsDialog({
   }
 
   return (
-    <Modal onClose={onClose} title="设置">
-      <div className="modal__body settings-dialog">
+    <Drawer onClose={onClose} title="设置">
+      <header className="drawer__header">
+        <div>
+          <p className="eyebrow">Workspace</p>
+          <h3>设置</h3>
+        </div>
+        <button
+          aria-label="关闭设置"
+          className="icon-button"
+          onClick={onClose}
+          type="button"
+        >
+          ✕
+        </button>
+      </header>
+
+      <div className="drawer__body settings-dialog">
         <section className="detail-section">
           <div className="detail-section__header">
             <h4>外观</h4>
@@ -200,16 +215,16 @@ export function SettingsDialog({
         </section>
 
         {message ? <p className="settings-message">{message}</p> : null}
-
-        <div className="modal__actions">
-          <button className="ghost-button" onClick={onClose} type="button">
-            关闭
-          </button>
-          <button onClick={() => void handleSave()} type="button">
-            保存设置
-          </button>
-        </div>
       </div>
-    </Modal>
+
+      <footer className="drawer__footer">
+        <button className="ghost-button" onClick={onClose} type="button">
+          关闭
+        </button>
+        <button onClick={() => void handleSave()} type="button">
+          保存设置
+        </button>
+      </footer>
+    </Drawer>
   );
 }

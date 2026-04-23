@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { DEFAULT_PREFERENCES, TASK_STATUS_ORDER } from "../lib/constants";
+import {
+  DEFAULT_PREFERENCES,
+  TASK_PRIORITY_ORDER,
+  TASK_STATUS_ORDER,
+} from "../lib/constants";
 import { createProject, buildProjectSummary } from "../types/project";
 import { createEmptyDraft } from "../types/report";
 import { completeTask, createTask, getChecklistProgress } from "../types/task";
@@ -7,6 +11,7 @@ import { completeTask, createTask, getChecklistProgress } from "../types/task";
 describe("domain definitions", () => {
   test("exposes the approved task status order", () => {
     expect(TASK_STATUS_ORDER).toEqual(["todo", "in_progress", "blocked", "done"]);
+    expect(TASK_PRIORITY_ORDER).toEqual(["normal", "important", "urgent"]);
   });
 
   test("creates default preferences with lane colors", () => {

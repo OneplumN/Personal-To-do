@@ -22,7 +22,7 @@ describe("Project workspace", () => {
     useReportStore.setState({ isLoaded: false, reports: [] });
   });
 
-  test("renders summary and supports list/board toggle", async () => {
+  test("renders board-first workspace with inline summary controls", async () => {
     const project = createProject({ name: "Project Beta" }, "2026-04-23T08:00:00.000Z");
     await projectRepository.save(project);
     await taskRepository.save(
@@ -36,9 +36,11 @@ describe("Project workspace", () => {
 
     await screen.findByRole("heading", { level: 2, name: "Project Beta" });
     expect(screen.getByText("任务工作区")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "看板" }));
-
+    expect(screen.queryByRole("button", { name: "列表" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "待做" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "加入焦点" })).toBeInTheDocument();
+    expect(screen.getByLabelText("准备任务列表 优先级")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "进行中" }));
+    expect(screen.getByRole("button", { name: "打开详情" })).toBeInTheDocument();
   });
 });
