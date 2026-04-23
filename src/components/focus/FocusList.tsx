@@ -169,43 +169,41 @@ function FocusRow({
         onPointerCancel={handlePointerEnd}
         style={{ transform: `translateX(${dragOffset}px)` }}
       >
-        <div className="focus-row__header">
+        <div className="focus-row__line">
           <FocusPriorityBadge
             onChangePriority={onChangePriority}
             priority={task.priority}
             taskId={task.id}
           />
-          <h3>{task.title}</h3>
-        </div>
-
-        <div className="focus-row__meta">
-          <span>{project.name}</span>
-          <span>最近更新 {new Date(task.updatedAt).toLocaleString("zh-CN")}</span>
-        </div>
-
-        <div
-          aria-label={`${task.title} 状态操作`}
-          className="focus-status-slider"
-          data-focus-control="true"
-          role="group"
-        >
-          {TODAY_FOCUS_STATUS_ORDER.map((status) => (
-            <button
-              className={
-                task.status === status
-                  ? "focus-status-slider__item focus-status-slider__item--active"
-                  : "focus-status-slider__item"
-              }
-              key={status}
-              onClick={(event) => {
-                event.stopPropagation();
-                onUpdateStatus(task.id, status);
-              }}
-              type="button"
-            >
-              {TASK_STATUS_LABELS[status]}
-            </button>
-          ))}
+          <h3 className="focus-row__title">
+            <span className="focus-row__project-name">{project.name}</span>
+            <span className="focus-row__separator"> - </span>
+            <span>{task.title}</span>
+          </h3>
+          <div
+            aria-label={`${task.title} 状态操作`}
+            className="focus-status-slider"
+            data-focus-control="true"
+            role="group"
+          >
+            {TODAY_FOCUS_STATUS_ORDER.map((status) => (
+              <button
+                className={
+                  task.status === status
+                    ? "focus-status-slider__item focus-status-slider__item--active"
+                    : "focus-status-slider__item"
+                }
+                key={status}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onUpdateStatus(task.id, status);
+                }}
+                type="button"
+              >
+                {TASK_STATUS_LABELS[status]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </article>
