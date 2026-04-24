@@ -6,7 +6,15 @@ import {
 } from "../lib/constants";
 import { createProject, buildProjectSummary } from "../types/project";
 import { createEmptyDraft } from "../types/report";
-import { completeTask, createTask, getChecklistProgress } from "../types/task";
+import {
+  completeTask,
+  createChecklistItem,
+  createTask,
+  getChecklistProgress,
+  moveChecklistItem,
+  removeChecklistItem,
+  updateChecklistItemText,
+} from "../types/task";
 
 describe("domain definitions", () => {
   test("exposes the approved task status order", () => {
@@ -63,5 +71,31 @@ describe("domain definitions", () => {
       nextSteps: [],
       overview: "",
     });
+  });
+
+  test("supports checklist edit, delete, reorder, and notes field", () => {
+    let task = createTask({
+      projectId: "project-1",
+      title: "Task for checklist editing",
+    });
+
+    const itemA = createChecklistItem("A");
+    const itemB = createChecklistItem("B");
+
+    task = {
+      ...task,
+      checklist: [itemA, itemB],
+      notes: "补充备注",
+    };
+
+    task = updateChecklistItemText(task, itemA.id, "A-updated");
+    expect(task.checklist[0]?.text).toBe("A-updated");
+
+    task = moveChecklistItem(task, itemB.id, "up");
+    expect(task.checklist[0]?.id).toBe(itemB.id);
+
+    task = removeChecklistItem(task, itemB.id);
+    expect(task.checklist).toHaveLength(1);
+    expect(task.notes).toBe("补充备注");
   });
 });

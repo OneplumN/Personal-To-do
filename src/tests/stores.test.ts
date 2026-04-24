@@ -35,6 +35,33 @@ describe("zustand stores", () => {
     expect(useTaskStore.getState().tasks[0]?.priority).toBe("important");
   });
 
+  test("supports checklist item editing, deletion, reordering, and task notes", async () => {
+    const project = await useProjectStore.getState().createProject({
+      name: "Project Checklist",
+    });
+    const task = await useTaskStore.getState().createTask({
+      projectId: project.id,
+      title: "Prepare checklist",
+    });
+
+    await useTaskStore.getState().addChecklistItem(task.id, "First");
+    await useTaskStore.getState().addChecklistItem(task.id, "Second");
+
+    const createdTask = useTaskStore.getState().tasks[0];
+    const firstId = createdTask.checklist[0]?.id;
+    const secondId = createdTask.checklist[1]?.id;
+
+    await useTaskStore.getState().updateChecklistItemText(task.id, firstId, "First updated");
+    await useTaskStore.getState().moveChecklistItem(task.id, secondId, "up");
+    await useTaskStore.getState().removeChecklistItem(task.id, firstId);
+    await useTaskStore.getState().updateTask(task.id, { notes: "备注内容" });
+
+    const nextTask = useTaskStore.getState().tasks[0];
+    expect(nextTask.checklist).toHaveLength(1);
+    expect(nextTask.checklist[0]?.text).toBe("Second");
+    expect(nextTask.notes).toBe("备注内容");
+  });
+
   test("saves and updates editable reports", async () => {
     const report = {
       createdAt: "2026-04-23T00:00:00.000Z",

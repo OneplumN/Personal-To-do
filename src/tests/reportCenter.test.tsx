@@ -23,23 +23,26 @@ describe("Report Center", () => {
   });
 
   test("generates reports from completed tasks only and saves editable records", async () => {
-    const project = createProject({ name: "Project Delta" }, "2026-04-23T08:00:00.000Z");
+    const now = Date.now();
+    const createdAt = new Date(now - 60 * 60 * 1000).toISOString();
+    const completedAt = new Date(now - 30 * 60 * 1000).toISOString();
+    const project = createProject({ name: "Project Delta" }, createdAt);
     const completed = completeTask(
       createTask(
         { projectId: project.id, title: "完成日报结构" },
-        "2026-04-23T00:10:00.000Z",
+        createdAt,
       ),
       {
         keyChanges: "增加概览区",
         notes: "后续补月报模板",
         summary: "日报结构完成",
       },
-      "2026-04-23T00:20:00.000Z",
+      completedAt,
     );
     const inProgress = {
       ...createTask(
         { projectId: project.id, title: "进行中的任务" },
-        "2026-04-23T08:20:00.000Z",
+        createdAt,
       ),
       status: "in_progress" as const,
     };

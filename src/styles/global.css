@@ -716,9 +716,75 @@ select {
 .progress-log,
 .report-editor,
 .report-editor__grid,
-.task-detail {
+.task-detail,
+.task-drawer {
   display: grid;
   gap: 14px;
+}
+
+.task-drawer__topbar {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 130px minmax(0, 1fr) 140px;
+}
+
+.task-drawer__compact-field,
+.task-drawer__title-field {
+  display: grid;
+  gap: 8px;
+}
+
+.task-drawer__title-field input {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.checklist--compact {
+  gap: 10px;
+}
+
+.checklist-row {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e7e0d4;
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 10px 12px;
+}
+
+.checklist-row__text {
+  background: transparent;
+  border: 0;
+  color: #111928;
+  padding: 0;
+  text-align: left;
+}
+
+.checklist-row__text--done {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.checklist-row__input {
+  background: #fff8ec;
+  border: 1px solid #e7e0d4;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.checklist-row__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.task-drawer .detail-section {
+  background: rgba(255, 248, 236, 0.5);
+  border: 1px solid #e7e0d4;
+  border-radius: 18px;
+  padding: 16px;
 }
 
 .report-editor__grid {
@@ -968,6 +1034,10 @@ button {
   .project-hero__metrics,
   .report-editor__grid,
   .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-drawer__topbar {
     grid-template-columns: 1fr;
   }
 

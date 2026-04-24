@@ -27,7 +27,6 @@ export function HomePage() {
   const removeFocusTask = useFocusStore((state) => state.removeTask);
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [detailMode, setDetailMode] = useState<"complete" | "view">("view");
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [undoState, setUndoState] = useState<UndoState>(null);
   const [projectName, setProjectName] = useState("");
@@ -78,8 +77,7 @@ export function HomePage() {
     navigate(`/projects/${project.id}`);
   }
 
-  function openTask(taskId: string, mode: "complete" | "view" = "view") {
-    setDetailMode(mode);
+  function openTask(taskId: string) {
     setActiveTaskId(taskId);
   }
 
@@ -126,7 +124,7 @@ export function HomePage() {
         <FocusList
           items={focusItems}
           onChangePriority={handlePriorityChange}
-          onOpenTask={(taskId) => openTask(taskId, "view")}
+          onOpenTask={openTask}
           onRemoveTask={(taskId) => {
             void removeFocusTask(taskId).then(() => {
               setUndoState({ taskId, type: "remove" });
@@ -145,7 +143,7 @@ export function HomePage() {
             撤销
           </button>
           {undoState.type === "complete" ? (
-            <button onClick={() => openTask(undoState.taskId, "view")} type="button">
+            <button onClick={() => openTask(undoState.taskId)} type="button">
               补充说明
             </button>
           ) : null}
@@ -212,10 +210,8 @@ export function HomePage() {
         <TaskDetailPanel
           onClose={() => {
             setActiveTaskId(null);
-            setDetailMode("view");
           }}
           project={activeTaskProject}
-          startCompletionFlow={detailMode === "complete"}
           taskId={activeTask.id}
         />
       ) : null}

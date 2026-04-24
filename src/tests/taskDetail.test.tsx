@@ -20,7 +20,7 @@ describe("Task detail", () => {
     useFocusStore.setState({ focusRefs: [], isLoaded: true });
   });
 
-  test("edits task content, checklist, progress logs, and completion wrap-up", async () => {
+  test("renders a checklist-first drawer and supports compact checklist editing", async () => {
     const project = createProject({ name: "Project Gamma" });
     const task = createTask({ projectId: project.id, title: "编写日报素材" });
 
@@ -34,31 +34,34 @@ describe("Task detail", () => {
       <TaskDetailPanel onClose={() => undefined} project={project} taskId={task.id} />,
     );
 
+    expect(screen.getByRole("dialog", { name: "任务详情" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("标题"));
     await user.type(screen.getByLabelText("标题"), "编写日报与周报素材");
-    await user.click(screen.getByRole("button", { name: "保存修改" }));
-
     await user.type(screen.getByPlaceholderText("添加子任务"), "补充完成说明");
     await user.click(screen.getByRole("button", { name: "添加" }));
+    await user.click(screen.getByRole("button", { name: "补充完成说明" }));
+    await user.clear(screen.getByLabelText("编辑子项"));
+    await user.type(screen.getByLabelText("编辑子项"), "补充完成说明-已编辑");
+    await user.click(screen.getByRole("button", { name: "下移子项" }));
+    await user.click(screen.getByRole("button", { name: "删除子项" }));
 
-    await user.type(
-      screen.getByPlaceholderText("补充一条最新进展或修改记录"),
-      "完成了结构化草稿整理",
-    );
-    await user.click(screen.getByRole("button", { name: "追加记录" }));
-
-    await user.selectOptions(screen.getByLabelText("状态"), "done");
-    await user.type(screen.getByLabelText("完成说明"), "日报与周报素材已整理");
-    await user.type(screen.getByLabelText("关键改动"), "新增结构化摘要");
-    await user.click(screen.getByRole("button", { name: "确认完成" }));
+    await user.type(screen.getByLabelText("正文"), "完成了结构化草稿整理");
+    await user.type(screen.getByLabelText("备注"), "日报可直接使用。");
+    await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
       const nextTask = useTaskStore.getState().tasks[0];
       expect(nextTask.title).toBe("编写日报与周报素材");
-      expect(nextTask.checklist[0]?.text).toBe("补充完成说明");
-      expect(nextTask.progressLog[0]?.content).toBe("完成了结构化草稿整理");
-      expect(nextTask.completionWrapUp?.summary).toBe("日报与周报素材已整理");
-      expect(nextTask.status).toBe("done");
+      expect(nextTask.body).toContain("完成了结构化草稿整理");
+      expect(nextTask.notes).toContain("日报可直接使用。");
+      expect(nextTask.checklist).toHaveLength(0);
+    });
+
+    await user.selectOptions(screen.getByLabelText("状态"), "done");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(useTaskStore.getState().tasks[0]?.status).toBe("done");
     });
   });
 });

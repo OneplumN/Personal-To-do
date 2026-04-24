@@ -21,7 +21,6 @@ export function ProjectWorkspacePage() {
   const toggleFocusTask = useFocusStore((state) => state.toggleTask);
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [detailMode, setDetailMode] = useState<"complete" | "view">("view");
 
   const project = useMemo(
     () => projects.find((item) => item.id === projectId) ?? null,
@@ -53,14 +52,13 @@ export function ProjectWorkspacePage() {
 
   const summary = buildProjectSummary(project, tasks);
 
-  function openTask(taskId: string, mode: "complete" | "view" = "view") {
-    setDetailMode(mode);
+  function openTask(taskId: string) {
     setActiveTaskId(taskId);
   }
 
   function handleQuickStatus(taskId: string, status: TaskStatus) {
     if (status === "done") {
-      openTask(taskId, "complete");
+      void setTaskStatus(taskId, "done");
       return;
     }
     void setTaskStatus(taskId, status);
@@ -111,7 +109,7 @@ export function ProjectWorkspacePage() {
         <TaskBoardView
           focusTaskIds={focusTaskIds}
           onChangePriority={handlePriorityChange}
-          onOpenTask={(taskId) => openTask(taskId, "view")}
+          onOpenTask={openTask}
           onToggleFocus={(taskId) => void toggleFocusTask(taskId)}
           onUpdateStatus={handleQuickStatus}
           tasks={projectTasks}
@@ -122,10 +120,8 @@ export function ProjectWorkspacePage() {
         <TaskDetailPanel
           onClose={() => {
             setActiveTaskId(null);
-            setDetailMode("view");
           }}
           project={project}
-          startCompletionFlow={detailMode === "complete"}
           taskId={activeTaskId}
         />
       ) : null}

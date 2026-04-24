@@ -163,3 +163,7 @@ This round is successful if:
 - Today Focus can be operated mostly without opening task detail
 - Project Workspace no longer requires list/board switching for normal use
 - Settings feel stable and dismissible in all common interaction paths
+
+## Follow-up Work
+The next approved refinement after Today Focus is:
+- [2026-04-23-task-detail-drawer-design.md](./2026-04-23-task-detail-drawer-design.md)

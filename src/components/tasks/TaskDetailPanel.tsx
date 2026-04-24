@@ -6,19 +6,15 @@ import { TASK_PRIORITY_LABELS, TASK_PRIORITY_ORDER } from "../../lib/constants";
 import type { Project } from "../../types/project";
 import type { TaskPriority, TaskStatus } from "../../types/task";
 import { ChecklistEditor } from "./ChecklistEditor";
-import { ProgressLogEditor } from "./ProgressLogEditor";
-import { TaskCompletionDialog } from "./TaskCompletionDialog";
-import { Modal } from "../common/Modal";
+import { Drawer } from "../common/Drawer";
 
 export function TaskDetailPanel({
   onClose,
   project,
-  startCompletionFlow = false,
   taskId,
 }: {
   onClose: () => void;
   project: Project;
-  startCompletionFlow?: boolean;
   taskId: string | null;
 }) {
   const task = useTaskStore((state) =>
@@ -28,26 +24,26 @@ export function TaskDetailPanel({
   const setStatus = useTaskStore((state) => state.setStatus);
   const setPriority = useTaskStore((state) => state.setPriority);
   const addChecklistItem = useTaskStore((state) => state.addChecklistItem);
+  const updateChecklistItemText = useTaskStore((state) => state.updateChecklistItemText);
+  const moveChecklistItem = useTaskStore((state) => state.moveChecklistItem);
+  const removeChecklistItem = useTaskStore((state) => state.removeChecklistItem);
   const toggleChecklistItem = useTaskStore((state) => state.toggleChecklistItem);
-  const appendProgressLog = useTaskStore((state) => state.appendProgressLog);
-  const completeTask = useTaskStore((state) => state.completeTask);
   const focusRefs = useFocusStore((state) => state.focusRefs);
   const toggleFocusTask = useFocusStore((state) => state.toggleTask);
 
   const [draftTitle, setDraftTitle] = useState(task?.title ?? "");
   const [draftBody, setDraftBody] = useState(task?.body ?? "");
-  const [showCompletion, setShowCompletion] = useState(false);
+  const [draftNotes, setDraftNotes] = useState(task?.notes ?? "");
+  const [draftStatus, setDraftStatus] = useState<TaskStatus>(task?.status ?? "todo");
+  const [draftPriority, setDraftPriority] = useState<TaskPriority>(task?.priority ?? "normal");
 
   useEffect(() => {
     setDraftTitle(task?.title ?? "");
     setDraftBody(task?.body ?? "");
-  }, [task?.body, task?.title]);
-
-  useEffect(() => {
-    if (task && startCompletionFlow) {
-      setShowCompletion(true);
-    }
-  }, [startCompletionFlow, task]);
+    setDraftNotes(task?.notes ?? "");
+    setDraftStatus(task?.status ?? "todo");
+    setDraftPriority(task?.priority ?? "normal");
+  }, [task?.body, task?.notes, task?.priority, task?.status, task?.title]);
 
   const inFocus = useMemo(
     () => (task ? focusRefs.some((ref) => ref.taskId === task.id) : false),
@@ -61,47 +57,41 @@ export function TaskDetailPanel({
   const currentTask = task;
 
   async function handleSaveBasics() {
+    await setPriority(currentTask.id, draftPriority);
     await updateTask(currentTask.id, {
       body: draftBody,
+      notes: draftNotes,
       title: draftTitle,
     });
-  }
-
-  async function handleStatusChange(status: TaskStatus) {
-    if (status === "done") {
-      setShowCompletion(true);
-      return;
-    }
-    await setStatus(currentTask.id, status);
+    await setStatus(currentTask.id, draftStatus);
   }
 
   return (
     <>
-      <Modal onClose={onClose} title="任务详情">
-        <div className="modal__body task-detail">
-          <div className="task-detail__meta">
-            <span>{project.name}</span>
-            <label className="field field--inline">
-              <span>状态</span>
-              <select
-                onChange={(event) => handleStatusChange(event.target.value as TaskStatus)}
-                value={currentTask.status}
-              >
-                {TASK_STATUS_ORDER.map((status) => (
-                  <option key={status} value={status}>
-                    {TASK_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field field--inline">
+      <Drawer onClose={onClose} title="任务详情">
+        <header className="drawer__header">
+          <div>
+            <p className="eyebrow">{project.name}</p>
+            <h3>任务详情</h3>
+          </div>
+          <button
+            aria-label="关闭任务详情"
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="drawer__body task-drawer">
+          <section className="task-drawer__topbar">
+            <label className="task-drawer__compact-field">
               <span>优先级</span>
               <select
                 aria-label="优先级"
-                onChange={(event) =>
-                  void setPriority(currentTask.id, event.target.value as TaskPriority)
-                }
-                value={currentTask.priority}
+                onChange={(event) => setDraftPriority(event.target.value as TaskPriority)}
+                value={draftPriority}
               >
                 {TASK_PRIORITY_ORDER.map((priority) => (
                   <option key={priority} value={priority}>
@@ -110,29 +100,29 @@ export function TaskDetailPanel({
                 ))}
               </select>
             </label>
-            <button
-              className={inFocus ? "ghost-button ghost-button--active" : "ghost-button"}
-              onClick={() => toggleFocusTask(currentTask.id)}
-              type="button"
-            >
-              {inFocus ? "移出今日焦点" : "加入今日焦点"}
-            </button>
-          </div>
 
-          <section className="detail-section">
-            <div className="detail-section__header">
-              <h4>任务内容</h4>
-              <button onClick={handleSaveBasics} type="button">
-                保存修改
-              </button>
-            </div>
-            <label className="field">
+            <label className="task-drawer__title-field">
               <span>标题</span>
-              <input onChange={(event) => setDraftTitle(event.target.value)} value={draftTitle} />
+              <input
+                aria-label="标题"
+                onChange={(event) => setDraftTitle(event.target.value)}
+                value={draftTitle}
+              />
             </label>
-            <label className="field">
-              <span>详情正文</span>
-              <textarea onChange={(event) => setDraftBody(event.target.value)} rows={6} value={draftBody} />
+
+            <label className="task-drawer__compact-field">
+              <span>状态</span>
+              <select
+                aria-label="状态"
+                onChange={(event) => setDraftStatus(event.target.value as TaskStatus)}
+                value={draftStatus}
+              >
+                {TASK_STATUS_ORDER.map((status) => (
+                  <option key={status} value={status}>
+                    {TASK_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
             </label>
           </section>
 
@@ -140,31 +130,67 @@ export function TaskDetailPanel({
             onAddItem={async (text) => {
               await addChecklistItem(task.id, text);
             }}
+            onDeleteItem={async (itemId) => {
+              await removeChecklistItem(task.id, itemId);
+            }}
+            onMoveItem={async (itemId, direction) => {
+              await moveChecklistItem(task.id, itemId, direction);
+            }}
             onToggleItem={async (itemId) => {
               await toggleChecklistItem(task.id, itemId);
             }}
-            task={currentTask}
-          />
-
-          <ProgressLogEditor
-            onAppendLog={async (content) => {
-              await appendProgressLog(currentTask.id, content);
+            onUpdateItemText={async (itemId, text) => {
+              await updateChecklistItemText(task.id, itemId, text);
             }}
             task={currentTask}
           />
-        </div>
-      </Modal>
 
-      {showCompletion ? (
-        <TaskCompletionDialog
-          onClose={() => setShowCompletion(false)}
-          onConfirm={async (input) => {
-            await completeTask(currentTask.id, input);
-            setShowCompletion(false);
-          }}
-          taskTitle={currentTask.title}
-        />
-      ) : null}
+          <section className="detail-section">
+            <div className="detail-section__header">
+              <h4>正文</h4>
+            </div>
+            <textarea
+              aria-label="正文"
+              onChange={(event) => setDraftBody(event.target.value)}
+              rows={6}
+              value={draftBody}
+            />
+          </section>
+
+          <section className="detail-section">
+            <div className="detail-section__header">
+              <h4>备注</h4>
+              <button
+                className={inFocus ? "ghost-button ghost-button--active" : "ghost-button"}
+                onClick={() => toggleFocusTask(currentTask.id)}
+                type="button"
+              >
+                {inFocus ? "移出今日焦点" : "加入今日焦点"}
+              </button>
+            </div>
+            <textarea
+              aria-label="备注"
+              onChange={(event) => setDraftNotes(event.target.value)}
+              rows={5}
+              value={draftNotes}
+            />
+          </section>
+        </div>
+
+        <footer className="drawer__footer">
+          <button className="ghost-button" onClick={onClose} type="button">
+            关闭
+          </button>
+          <button
+            onClick={() => {
+              void handleSaveBasics();
+            }}
+            type="button"
+          >
+            保存
+          </button>
+        </footer>
+      </Drawer>
     </>
   );
 }

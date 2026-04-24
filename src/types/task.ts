@@ -25,6 +25,7 @@ export type Task = {
   projectId: string;
   title: string;
   body: string;
+  notes: string;
   status: TaskStatus;
   priority: TaskPriority;
   checklist: ChecklistItem[];
@@ -46,6 +47,7 @@ export function createTask(input: TaskCreateInput, now = new Date().toISOString(
     projectId: input.projectId,
     title: input.title.trim(),
     body: input.body?.trim() ?? "",
+    notes: "",
     status: "todo",
     priority: "normal",
     checklist: [],
@@ -61,6 +63,60 @@ export function createChecklistItem(text: string): ChecklistItem {
     id: crypto.randomUUID(),
     text: text.trim(),
     done: false,
+  };
+}
+
+export function updateChecklistItemText(
+  task: Task,
+  itemId: string,
+  text: string,
+  now = new Date().toISOString(),
+): Task {
+  return {
+    ...task,
+    checklist: task.checklist.map((item) =>
+      item.id === itemId ? { ...item, text: text.trim() } : item,
+    ),
+    updatedAt: now,
+  };
+}
+
+export function removeChecklistItem(
+  task: Task,
+  itemId: string,
+  now = new Date().toISOString(),
+): Task {
+  return {
+    ...task,
+    checklist: task.checklist.filter((item) => item.id !== itemId),
+    updatedAt: now,
+  };
+}
+
+export function moveChecklistItem(
+  task: Task,
+  itemId: string,
+  direction: "up" | "down",
+  now = new Date().toISOString(),
+): Task {
+  const index = task.checklist.findIndex((item) => item.id === itemId);
+  if (index === -1) {
+    return task;
+  }
+
+  const nextIndex = direction === "up" ? index - 1 : index + 1;
+  if (nextIndex < 0 || nextIndex >= task.checklist.length) {
+    return task;
+  }
+
+  const checklist = [...task.checklist];
+  const [item] = checklist.splice(index, 1);
+  checklist.splice(nextIndex, 0, item);
+
+  return {
+    ...task,
+    checklist,
+    updatedAt: now,
   };
 }
 
