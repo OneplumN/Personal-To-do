@@ -1,6 +1,6 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TaskDetailPanel } from "../components/tasks/TaskDetailPanel";
 import { resetDatabase } from "../lib/storage/db";
 import { projectRepository } from "../lib/storage/projectRepository";
@@ -20,7 +20,7 @@ describe("Task detail", () => {
     useFocusStore.setState({ focusRefs: [], isLoaded: true });
   });
 
-  test("renders a checklist-first drawer and supports compact checklist editing", async () => {
+  test("renders a checklist-first modal and supports compact checklist editing", async () => {
     const project = createProject({ name: "Project Gamma" });
     const task = createTask({ projectId: project.id, title: "编写日报素材" });
 
@@ -30,38 +30,94 @@ describe("Task detail", () => {
     useTaskStore.setState({ isLoaded: true, tasks: [task] });
 
     const user = userEvent.setup();
-    renderWithRouter(
-      <TaskDetailPanel onClose={() => undefined} project={project} taskId={task.id} />,
+    const onClose = vi.fn();
+    const { container } = renderWithRouter(
+      <TaskDetailPanel onClose={onClose} project={project} taskId={task.id} />,
     );
 
     expect(screen.getByRole("dialog", { name: "任务详情" })).toBeInTheDocument();
+    expect(screen.getByText("Tasklist")).toBeInTheDocument();
+    expect(screen.getByText("Project Gamma")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("编写日报素材")).toBeInTheDocument();
+    expect(screen.getByLabelText("标题")).toHaveAttribute("title", "编辑任务标题");
+    expect(container.querySelector(".task-detail-modal__title-edit-icon")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "修改优先级：普通" })).toHaveAttribute(
+      "title",
+      "修改优先级",
+    );
+    expect(screen.getByRole("button", { name: "修改状态：待做" })).toHaveAttribute(
+      "title",
+      "修改状态",
+    );
+    expect(screen.getByRole("button", { name: "加入焦点" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "加入焦点" })).toHaveAttribute(
+      "title",
+      "加入今日焦点",
+    );
+
+    fireEvent.click(container.querySelector(".task-detail-backdrop") as HTMLElement);
+    expect(onClose).not.toHaveBeenCalled();
+
+    expect(screen.queryByPlaceholderText("添加子任务")).not.toBeInTheDocument();
     await user.clear(screen.getByLabelText("标题"));
     await user.type(screen.getByLabelText("标题"), "编写日报与周报素材");
-    await user.type(screen.getByPlaceholderText("添加子任务"), "补充完成说明");
-    await user.click(screen.getByRole("button", { name: "添加" }));
+    await user.click(screen.getByRole("button", { name: "添加子任务" }));
+    expect(screen.getByPlaceholderText("添加子任务")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "取消添加子任务" }));
+    expect(screen.queryByPlaceholderText("添加子任务")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "添加子任务" }));
+    await user.type(screen.getByPlaceholderText("添加子任务"), "补充完成说明{Enter}");
     await user.click(screen.getByRole("button", { name: "补充完成说明" }));
     await user.clear(screen.getByLabelText("编辑子项"));
     await user.type(screen.getByLabelText("编辑子项"), "补充完成说明-已编辑");
-    await user.click(screen.getByRole("button", { name: "下移子项" }));
-    await user.click(screen.getByRole("button", { name: "删除子项" }));
+    await user.click(screen.getByRole("button", { name: "添加子任务" }));
+    await user.type(screen.getByPlaceholderText("添加子任务"), "同步周报提纲{Enter}");
+
+    const firstRow = screen.getByText("补充完成说明-已编辑").closest(".checklist-row");
+    const secondRow = screen.getByText("同步周报提纲").closest(".checklist-row");
+    expect(firstRow).not.toBeNull();
+    expect(secondRow).not.toBeNull();
+
+    fireEvent.dragStart(secondRow as HTMLElement);
+    fireEvent.dragOver(firstRow as HTMLElement);
+    fireEvent.drop(firstRow as HTMLElement);
+    fireEvent.dragEnd(secondRow as HTMLElement);
+
+    await waitFor(() => {
+      expect(useTaskStore.getState().tasks[0]?.checklist.map((item) => item.text)).toEqual([
+        "同步周报提纲",
+        "补充完成说明-已编辑",
+      ]);
+    });
+
+    await user.click(within(firstRow as HTMLElement).getByRole("button", { name: "删除子项" }));
 
     await user.type(screen.getByLabelText("正文"), "完成了结构化草稿整理");
     await user.type(screen.getByLabelText("备注"), "日报可直接使用。");
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: "保存并关闭" }));
 
     await waitFor(() => {
       const nextTask = useTaskStore.getState().tasks[0];
       expect(nextTask.title).toBe("编写日报与周报素材");
       expect(nextTask.body).toContain("完成了结构化草稿整理");
       expect(nextTask.notes).toContain("日报可直接使用。");
-      expect(nextTask.checklist).toHaveLength(0);
+      expect(nextTask.checklist).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    await user.selectOptions(screen.getByLabelText("状态"), "done");
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    onClose.mockClear();
+
+    await user.click(screen.getByRole("button", { name: "修改状态：待做" }));
+    await user.click(screen.getByRole("button", { name: "已完成" }));
+    await user.click(screen.getByRole("button", { name: "保存并关闭" }));
 
     await waitFor(() => {
       expect(useTaskStore.getState().tasks[0]?.status).toBe("done");
+    });
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

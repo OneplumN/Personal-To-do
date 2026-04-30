@@ -35,6 +35,30 @@ describe("zustand stores", () => {
     expect(useTaskStore.getState().tasks[0]?.priority).toBe("important");
   });
 
+  test("reorders focus references and persists the normalized order", async () => {
+    const project = await useProjectStore.getState().createProject({
+      name: "Project Focus",
+    });
+    const firstTask = await useTaskStore.getState().createTask({
+      projectId: project.id,
+      title: "First focus",
+    });
+    const secondTask = await useTaskStore.getState().createTask({
+      projectId: project.id,
+      title: "Second focus",
+    });
+
+    await useFocusStore.getState().addTask(firstTask.id);
+    await useFocusStore.getState().addTask(secondTask.id);
+    await useFocusStore.getState().reorderTask(secondTask.id, 0);
+
+    expect(useFocusStore.getState().focusRefs.map((ref) => ref.taskId)).toEqual([
+      secondTask.id,
+      firstTask.id,
+    ]);
+    expect(useFocusStore.getState().focusRefs.map((ref) => ref.order)).toEqual([0, 1]);
+  });
+
   test("supports checklist item editing, deletion, reordering, and task notes", async () => {
     const project = await useProjectStore.getState().createProject({
       name: "Project Checklist",

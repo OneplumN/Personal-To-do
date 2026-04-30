@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
+import { DEFAULT_PREFERENCES } from "../lib/constants";
 import { exportSnapshot } from "../lib/export/exportSnapshot";
 import { importSnapshot } from "../lib/import/importSnapshot";
 import { resetDatabase } from "../lib/storage/db";
@@ -33,15 +34,7 @@ describe("import and export snapshot", () => {
       exportedAt: "2026-04-23T10:00:00.000Z",
       focusRefs: [],
       preferences: {
-        aiEndpoint: "",
-        aiKey: "",
-        aiRole: "",
-        id: "preferences" as const,
-        laneColors: {
-          doing: "#5AC8FA",
-          done: "#34D399",
-          task: "#FFB347",
-        },
+        ...DEFAULT_PREFERENCES,
         theme: "dark" as const,
         updatedAt: "2026-04-23T10:00:00.000Z",
       },

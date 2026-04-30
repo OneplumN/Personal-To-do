@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { queueLocalSnapshotSync } from "../../lib/localPersistence/localSnapshotApi";
 import { reportRepository } from "../../lib/storage/reportRepository";
 import type { SavedReport } from "../../types/report";
 
@@ -29,6 +30,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
         ? get().reports.map((item) => (item.id === report.id ? report : item))
         : [report, ...get().reports],
     });
+    queueLocalSnapshotSync();
     return report;
   },
   async updateReport(reportId, update) {
@@ -47,6 +49,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
         report.id === reportId ? nextReport : report,
       ),
     });
+    queueLocalSnapshotSync();
     return nextReport;
   },
 }));

@@ -2,6 +2,50 @@ import type { Project } from "../../types/project";
 import { createEmptyDraft, type ReportDraft, type ReportType } from "../../types/report";
 import type { Task } from "../../types/task";
 
+function compact(value?: string) {
+  return value?.replace(/\s+/g, " ").trim() ?? "";
+}
+
+function formatCompletedAt(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatChecklist(task: Task) {
+  if (task.checklist.length === 0) {
+    return "";
+  }
+
+  return task.checklist
+    .map((item) => `${item.done ? "[x]" : "[ ]"} ${compact(item.text)}`)
+    .join("; ");
+}
+
+function buildTaskContext(task: Task, projectName: string) {
+  const completion = task.completionWrapUp;
+  const fields = [
+    `项目：${projectName}`,
+    `标题：${compact(task.title)}`,
+    compact(task.body) ? `正文：${compact(task.body)}` : "",
+    compact(task.notes) ? `备注：${compact(task.notes)}` : "",
+    formatChecklist(task) ? `Tasklist：${formatChecklist(task)}` : "",
+    compact(completion?.summary) ? `完成摘要：${compact(completion?.summary)}` : "",
+    compact(completion?.keyChanges) ? `关键改动：${compact(completion?.keyChanges)}` : "",
+    compact(completion?.notes) ? `完成备注：${compact(completion?.notes)}` : "",
+    formatCompletedAt(completion?.completedAt) ? `完成时间：${formatCompletedAt(completion?.completedAt)}` : "",
+  ].filter(Boolean);
+
+  return fields.join(" / ");
+}
+
 export function getReportRange(
   type: ReportType,
   now = new Date(),
@@ -9,7 +53,7 @@ export function getReportRange(
   const current = new Date(now);
   const rangeStart = new Date(current);
 
-  if (type === "daily") {
+  if (type === "custom" || type === "daily") {
     rangeStart.setHours(0, 0, 0, 0);
   } else if (type === "weekly") {
     const day = rangeStart.getDay() || 7;
@@ -31,8 +75,9 @@ export function buildReportDraft(
   projects: Project[],
   type: ReportType,
   now = new Date(),
+  rangeOverride?: { rangeEnd: string; rangeStart: string },
 ): { draft: ReportDraft; sourceTasks: Task[] } {
-  const { rangeEnd, rangeStart } = getReportRange(type, now);
+  const { rangeEnd, rangeStart } = rangeOverride ?? getReportRange(type, now);
   const completedTasks = tasks
     .filter((task) => {
       if (task.status !== "done" || !task.completionWrapUp?.completedAt) {
@@ -45,8 +90,8 @@ export function buildReportDraft(
       );
     })
     .sort((left, right) =>
-      (right.completionWrapUp?.completedAt ?? right.updatedAt).localeCompare(
-        left.completionWrapUp?.completedAt ?? left.updatedAt,
+      (left.completionWrapUp?.completedAt ?? left.updatedAt).localeCompare(
+        right.completionWrapUp?.completedAt ?? right.updatedAt,
       ),
     );
 
@@ -69,7 +114,7 @@ export function buildReportDraft(
 
   draft.completedItems = completedTasks.map((task) => {
     const projectName = projectNameById.get(task.projectId) ?? "未命名项目";
-    return `${projectName}：${task.title}`;
+    return buildTaskContext(task, projectName);
   });
 
   draft.keyChanges = completedTasks

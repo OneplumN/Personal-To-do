@@ -1,4 +1,4 @@
-export type ReportType = "daily" | "weekly" | "monthly";
+export type ReportType = "custom" | "daily" | "weekly" | "monthly";
 
 export type ReportDraft = {
   blockers: string[];

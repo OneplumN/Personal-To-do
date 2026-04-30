@@ -1,22 +1,117 @@
-import { useRef, useState } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import {
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_ORDER,
   TASK_STATUS_LABELS,
 } from "../../lib/constants";
 import type { Project } from "../../types/project";
-import type { Task, TaskPriority, TaskStatus } from "../../types/task";
+import type { Task, TaskPriority } from "../../types/task";
 
 export type FocusListItem = {
   project: Project;
   task: Task;
 };
 
-const SWIPE_THRESHOLD = 88;
-const SWIPE_PREVIEW_LIMIT = 116;
-const TODAY_FOCUS_STATUS_ORDER: TaskStatus[] = ["todo", "in_progress", "blocked"];
+const FOCUS_GLASS_PALETTE = [
+  {
+    border: "rgba(216, 162, 74, 0.22)",
+    shadow: "rgba(216, 162, 74, 0.08)",
+    surface: "rgba(255, 248, 236, 0.92)",
+  },
+  {
+    border: "rgba(90, 200, 250, 0.2)",
+    shadow: "rgba(90, 200, 250, 0.08)",
+    surface: "rgba(241, 248, 253, 0.92)",
+  },
+  {
+    border: "rgba(52, 211, 153, 0.2)",
+    shadow: "rgba(52, 211, 153, 0.08)",
+    surface: "rgba(242, 250, 245, 0.92)",
+  },
+  {
+    border: "rgba(125, 138, 255, 0.18)",
+    shadow: "rgba(125, 138, 255, 0.08)",
+    surface: "rgba(245, 246, 252, 0.92)",
+  },
+] as const;
 
-function FocusPriorityBadge({
+function getGlassTone(taskId: string) {
+  const hash = Array.from(taskId).reduce(
+    (value, character) => value + character.charCodeAt(0),
+    0,
+  );
+  return FOCUS_GLASS_PALETTE[hash % FOCUS_GLASS_PALETTE.length];
+}
+
+function FocusIcon({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <span aria-hidden="true" className="focus-card__icon">
+      {children}
+    </span>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path
+        d="M12 20h9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path
+        d="m5 12 5 5L20 7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function RemoveIcon() {
+  return (
+    <svg fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path
+        d="m18 6-12 12"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="m6 6 12 12"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function FocusPriorityControl({
   onChangePriority,
   priority,
   taskId,
@@ -28,31 +123,29 @@ function FocusPriorityBadge({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="priority-badge-wrap" data-focus-control="true">
+    <div className="focus-priority" data-focus-control="true">
       <button
         aria-expanded={open}
-        className={`priority-pill priority-pill--${priority} priority-pill--button`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((value) => !value);
-        }}
+        aria-label={`修改优先级：${TASK_PRIORITY_LABELS[priority]}`}
+        className={`priority-pill priority-pill--${priority} focus-priority__trigger`}
+        title="修改优先级"
+        onClick={() => setOpen((value) => !value)}
         type="button"
       >
         {TASK_PRIORITY_LABELS[priority]}
       </button>
 
       {open ? (
-        <div className="priority-menu" role="menu">
+        <div className="focus-priority__menu" role="menu">
           {TASK_PRIORITY_ORDER.map((nextPriority) => (
             <button
               className={
                 nextPriority === priority
-                  ? "priority-menu__item priority-menu__item--active"
-                  : "priority-menu__item"
+                  ? `focus-priority__option focus-priority__option--${nextPriority} focus-priority__option--active`
+                  : `focus-priority__option focus-priority__option--${nextPriority}`
               }
               key={nextPriority}
-              onClick={(event) => {
-                event.stopPropagation();
+              onClick={() => {
                 onChangePriority(taskId, nextPriority);
                 setOpen(false);
               }}
@@ -67,143 +160,166 @@ function FocusPriorityBadge({
   );
 }
 
-function FocusRow({
+function FocusCard({
+  index,
   item,
   onChangePriority,
   onOpenTask,
   onRemoveTask,
+  onReorder,
   onUpdateStatus,
 }: {
+  index: number;
   item: FocusListItem;
   onChangePriority: (taskId: string, priority: TaskPriority) => void;
   onOpenTask: (taskId: string) => void;
   onRemoveTask: (taskId: string) => void;
-  onUpdateStatus: (taskId: string, status: TaskStatus) => void;
+  onReorder: (taskId: string, toIndex: number) => void;
+  onUpdateStatus: (taskId: string, status: "done") => void;
 }) {
-  const { project, task } = item;
-  const [dragOffset, setDragOffset] = useState(0);
-  const dragRef = useRef<{
-    active: boolean;
-    pointerId: number | null;
-    startX: number;
-  }>({
-    active: false,
-    pointerId: null,
-    startX: 0,
-  });
-  const suppressClickRef = useRef(false);
-
-  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if ((event.target as HTMLElement).closest("[data-focus-control='true']")) {
-      return;
-    }
-    dragRef.current = {
-      active: true,
-      pointerId: event.pointerId,
-      startX: event.clientX,
-    };
-    if (typeof event.currentTarget.setPointerCapture === "function") {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-  }
-
-  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (!dragRef.current.active || dragRef.current.pointerId !== event.pointerId) {
-      return;
-    }
-    const delta = event.clientX - dragRef.current.startX;
-    const limited = Math.max(-SWIPE_PREVIEW_LIMIT, Math.min(SWIPE_PREVIEW_LIMIT, delta));
-    if (Math.abs(limited) > 6) {
-      suppressClickRef.current = true;
-    }
-    setDragOffset(limited);
-  }
-
-  function handlePointerEnd(event: React.PointerEvent<HTMLDivElement>) {
-    if (!dragRef.current.active || dragRef.current.pointerId !== event.pointerId) {
-      return;
-    }
-    if (typeof event.currentTarget.releasePointerCapture === "function") {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    dragRef.current = {
-      active: false,
-      pointerId: null,
-      startX: 0,
-    };
-
-    if (dragOffset >= SWIPE_THRESHOLD) {
-      onUpdateStatus(task.id, "done");
-    } else if (dragOffset <= -SWIPE_THRESHOLD) {
-      onRemoveTask(task.id);
-    }
-
-    setDragOffset(0);
-    window.setTimeout(() => {
-      suppressClickRef.current = false;
-    }, 0);
-  }
-
-  function handleRowClick() {
-    if (suppressClickRef.current) {
-      return;
-    }
-    onOpenTask(task.id);
-  }
+  const { task } = item;
+  const [dragState, setDragState] = useState<"idle" | "dragging" | "target">("idle");
+  const glassTone = getGlassTone(task.id);
+  const pendingTasklist = task.checklist.filter((checklistItem) => !checklistItem.done);
+  const tasklistPreview = pendingTasklist.slice(0, 3);
+  const completedTaskCount = task.checklist.length - pendingTasklist.length;
+  const footerLabel =
+    task.status === "blocked"
+      ? TASK_STATUS_LABELS[task.status]
+      : task.checklist.length > 0
+        ? `${completedTaskCount}/${task.checklist.length}`
+        : task.status === "todo"
+          ? "待开始"
+          : "";
 
   return (
-    <article className="focus-row" key={task.id}>
-      <div className="focus-row__background focus-row__background--left" aria-hidden="true">
-        <span>❌ 移出焦点</span>
-      </div>
-      <div className="focus-row__background focus-row__background--right" aria-hidden="true">
-        <span>✅ 完成</span>
+    <article
+      className={
+        dragState === "dragging"
+          ? "focus-card focus-card--dragging"
+          : dragState === "target"
+            ? "focus-card focus-card--target"
+            : "focus-card"
+      }
+      draggable
+      style={
+        {
+          "--focus-card-border": glassTone.border,
+          "--focus-card-shadow": glassTone.shadow,
+          "--focus-card-surface": glassTone.surface,
+        } as CSSProperties
+      }
+      onDragEnd={() => setDragState("idle")}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragState((current) => (current === "dragging" ? current : "target"));
+      }}
+      onDragStart={(event) => {
+        event.dataTransfer.setData("text/plain", task.id);
+        event.dataTransfer.effectAllowed = "move";
+        setDragState("dragging");
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        const draggedTaskId = event.dataTransfer.getData("text/plain");
+        if (draggedTaskId) {
+          onReorder(draggedTaskId, index);
+        }
+        setDragState("idle");
+      }}
+    >
+      <div className="focus-card__top">
+        <div className="focus-card__title" role="group" aria-label={`焦点任务：${task.title}`}>
+          <span className="focus-card__title-line">
+            <FocusPriorityControl
+              onChangePriority={onChangePriority}
+              priority={task.priority}
+              taskId={task.id}
+            />
+            <span className="focus-card__separator">·</span>
+            <span className="focus-card__title-static">
+              <span className="focus-card__title-text">{task.title}</span>
+            </span>
+          </span>
+        </div>
+        <button
+          aria-label="移出"
+          className="icon-button focus-card__remove"
+          data-tooltip="移出"
+          onClick={() => onRemoveTask(task.id)}
+          title="移出"
+          type="button"
+        >
+          <FocusIcon>
+            <RemoveIcon />
+          </FocusIcon>
+        </button>
       </div>
 
-      <div
-        className="focus-row__sheet"
-        onClick={handleRowClick}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
-        style={{ transform: `translateX(${dragOffset}px)` }}
-      >
-        <div className="focus-row__line">
-          <FocusPriorityBadge
-            onChangePriority={onChangePriority}
-            priority={task.priority}
-            taskId={task.id}
-          />
-          <h3 className="focus-row__title">
-            <span className="focus-row__project-name">{project.name}</span>
-            <span className="focus-row__separator"> - </span>
-            <span>{task.title}</span>
-          </h3>
-          <div
-            aria-label={`${task.title} 状态操作`}
-            className="focus-status-slider"
-            data-focus-control="true"
-            role="group"
+      {task.checklist.length > 0 ? (
+        <div className="focus-card__tasklist">
+          <p className="eyebrow">Tasklist</p>
+          {tasklistPreview.length > 0 ? (
+            <>
+              <ol className="focus-card__tasklist-items">
+                {tasklistPreview.map((itemPreview, previewIndex) => (
+                  <li key={itemPreview.id}>
+                    <span className="focus-card__tasklist-index">{previewIndex + 1}.</span>
+                    <span className="focus-card__tasklist-text">{itemPreview.text}</span>
+                  </li>
+                ))}
+              </ol>
+              {pendingTasklist.length > tasklistPreview.length ? (
+                <span className="focus-card__tasklist-more">
+                  +{pendingTasklist.length - tasklistPreview.length}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <div className="focus-card__tasklist-empty">
+              <strong>Tasklist 已完成</strong>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      <div className="focus-card__footer">
+        <div className="focus-card__footer-meta">
+          {footerLabel ? (
+            task.status === "blocked" ? (
+              <span className={`status-pill status-pill--${task.status}`}>{footerLabel}</span>
+            ) : (
+              <span className="focus-card__progress">{footerLabel}</span>
+            )
+          ) : null}
+        </div>
+        <div className="focus-card__actions">
+          <button
+            aria-label="编辑"
+            className="icon-button focus-card__action focus-card__action--edit"
+            data-tooltip="编辑"
+            onClick={() => onOpenTask(task.id)}
+            title="编辑"
+            type="button"
           >
-            {TODAY_FOCUS_STATUS_ORDER.map((status) => (
-              <button
-                className={
-                  task.status === status
-                    ? "focus-status-slider__item focus-status-slider__item--active"
-                    : "focus-status-slider__item"
-                }
-                key={status}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onUpdateStatus(task.id, status);
-                }}
-                type="button"
-              >
-                {TASK_STATUS_LABELS[status]}
-              </button>
-            ))}
-          </div>
+            <FocusIcon>
+              <PencilIcon />
+            </FocusIcon>
+          </button>
+          {task.status !== "done" ? (
+            <button
+              aria-label="完成"
+              className="icon-button focus-card__action focus-card__action--complete"
+              data-tooltip="完成"
+              onClick={() => onUpdateStatus(task.id, "done")}
+              title="完成"
+              type="button"
+            >
+              <FocusIcon>
+                <CheckIcon />
+              </FocusIcon>
+            </button>
+          ) : null}
         </div>
       </div>
     </article>
@@ -215,33 +331,35 @@ export function FocusList({
   onChangePriority,
   onOpenTask,
   onRemoveTask,
+  onReorder,
   onUpdateStatus,
 }: {
   items: FocusListItem[];
   onChangePriority: (taskId: string, priority: TaskPriority) => void;
   onOpenTask: (taskId: string) => void;
   onRemoveTask: (taskId: string) => void;
-  onUpdateStatus: (taskId: string, status: TaskStatus) => void;
+  onReorder: (taskId: string, toIndex: number) => void;
+  onUpdateStatus: (taskId: string, status: "done") => void;
 }) {
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        <p className="eyebrow">Today Focus</p>
         <h3>今天还没有焦点任务</h3>
-        <p>从项目中的任务手动加入今日焦点，首页就会集中显示它们。</p>
       </div>
     );
   }
 
   return (
-    <div className="focus-list focus-list--compact">
-      {items.map((item) => (
-        <FocusRow
+    <div className="focus-list focus-list--cards">
+      {items.map((item, index) => (
+        <FocusCard
+          index={index}
           item={item}
           key={item.task.id}
           onChangePriority={onChangePriority}
           onOpenTask={onOpenTask}
           onRemoveTask={onRemoveTask}
+          onReorder={onReorder}
           onUpdateStatus={onUpdateStatus}
         />
       ))}

@@ -16,11 +16,27 @@ export const focusRepository = {
   async list() {
     const db = await getDatabase();
     const refs = await db.getAll("focusRefs");
-    return refs.sort((left, right) => left.addedAt.localeCompare(right.addedAt));
+    return refs.sort((left, right) => {
+      if (left.order !== undefined && right.order !== undefined) {
+        return left.order - right.order;
+      }
+      return left.addedAt.localeCompare(right.addedAt);
+    });
   },
 
   async remove(taskId: string) {
     const db = await getDatabase();
     await db.delete("focusRefs", taskId);
+  },
+
+  async replaceAll(references: FocusReference[]) {
+    const db = await getDatabase();
+    const transaction = db.transaction("focusRefs", "readwrite");
+    await transaction.store.clear();
+    for (const reference of references) {
+      await transaction.store.put(reference);
+    }
+    await transaction.done;
+    return references;
   },
 };

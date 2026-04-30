@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { DEFAULT_PREFERENCES } from "../../lib/constants";
+import { queueLocalSnapshotSync } from "../../lib/localPersistence/localSnapshotApi";
 import { preferenceRepository } from "../../lib/storage/preferenceRepository";
 import type { Preferences } from "../../types/preferences";
 
@@ -9,7 +10,19 @@ type PreferenceState = {
   preferences: Preferences;
   savePreferences: (
     update: Partial<
-      Pick<Preferences, "aiEndpoint" | "aiKey" | "aiRole" | "laneColors" | "theme">
+      Pick<
+        Preferences,
+        | "activeAiProfileId"
+        | "activeAiRoleTemplateId"
+        | "aiEndpoint"
+        | "aiKey"
+        | "aiProfiles"
+        | "aiRole"
+        | "aiRolePresets"
+        | "aiRoleTemplates"
+        | "laneColors"
+        | "theme"
+      >
     >,
   ) => Promise<Preferences>;
 };
@@ -23,17 +36,40 @@ export const usePreferenceStore = create<PreferenceState>((set, get) => ({
   },
   preferences: DEFAULT_PREFERENCES,
   async savePreferences(update) {
+    const currentPreferences = get().preferences;
+    const activeAiProfileId = update.activeAiProfileId ?? currentPreferences.activeAiProfileId;
+    const aiProfiles = (update.aiProfiles ?? currentPreferences.aiProfiles).map((profile) =>
+      profile.id === activeAiProfileId
+        ? {
+            ...profile,
+            apiKey: update.aiKey ?? profile.apiKey,
+            endpoint: update.aiEndpoint ?? profile.endpoint,
+          }
+        : profile,
+    );
     const nextPreferences: Preferences = {
-      ...get().preferences,
+      ...currentPreferences,
       ...update,
+      activeAiProfileId,
+      aiProfiles,
+      aiRolePresets: update.aiRoleTemplates
+        ? update.aiRoleTemplates
+            .filter((template) => !template.builtIn)
+            .map((template) => ({
+              id: template.id,
+              label: template.name,
+              prompt: template.prompt,
+            }))
+        : (update.aiRolePresets ?? currentPreferences.aiRolePresets),
       laneColors: {
-        ...get().preferences.laneColors,
+        ...currentPreferences.laneColors,
         ...update.laneColors,
       },
       updatedAt: new Date().toISOString(),
     };
-    await preferenceRepository.save(nextPreferences);
-    set({ preferences: nextPreferences });
-    return nextPreferences;
+    const savedPreferences = await preferenceRepository.save(nextPreferences);
+    set({ preferences: savedPreferences });
+    queueLocalSnapshotSync();
+    return savedPreferences;
   },
 }));

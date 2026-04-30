@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { queueLocalSnapshotSync } from "../../lib/localPersistence/localSnapshotApi";
 import { taskRepository } from "../../lib/storage/taskRepository";
 import {
   appendTaskLog,
@@ -34,6 +35,7 @@ type TaskState = {
   ) => Promise<Task | null>;
   removeTask: (taskId: string) => Promise<void>;
   removeChecklistItem: (taskId: string, itemId: string) => Promise<Task | null>;
+  restoreTask: (task: Task) => Promise<Task>;
   setPriority: (taskId: string, priority: TaskPriority) => Promise<Task | null>;
   setStatus: (taskId: string, status: TaskStatus) => Promise<Task | null>;
   tasks: Task[];
@@ -69,6 +71,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async appendProgressLog(taskId, content) {
@@ -79,6 +82,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const nextTask = appendTaskLog(task, content);
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async completeTask(taskId, input) {
@@ -89,12 +93,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const nextTask = completeTask(task, input);
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async createTask(input) {
     const task = createTask(input);
     await taskRepository.save(task);
     set({ tasks: [task, ...get().tasks] });
+    queueLocalSnapshotSync();
     return task;
   },
   isLoaded: false,
@@ -111,11 +117,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const nextTask = moveChecklistItem(task, itemId, direction);
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async removeTask(taskId) {
     await taskRepository.delete(taskId);
     set({ tasks: get().tasks.filter((task) => task.id !== taskId) });
+    queueLocalSnapshotSync();
   },
   async removeChecklistItem(taskId, itemId) {
     const task = get().tasks.find((item) => item.id === taskId);
@@ -125,7 +133,17 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const nextTask = removeChecklistItem(task, itemId);
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
+  },
+  async restoreTask(task) {
+    await taskRepository.save(task);
+    const exists = get().tasks.some((item) => item.id === task.id);
+    set({
+      tasks: exists ? replaceTask(get().tasks, task) : [...get().tasks, task],
+    });
+    queueLocalSnapshotSync();
+    return task;
   },
   async setPriority(taskId, priority) {
     const task = get().tasks.find((item) => item.id === taskId);
@@ -139,6 +157,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async setStatus(taskId, status) {
@@ -163,6 +182,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   tasks: [],
@@ -180,6 +200,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async updateChecklistItemText(taskId, itemId, text) {
@@ -190,6 +211,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const nextTask = updateChecklistItemText(task, itemId, text);
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
   async updateTask(taskId, update) {
@@ -206,6 +228,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
     return nextTask;
   },
 }));

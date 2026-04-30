@@ -17,10 +17,13 @@ export type ProjectCreateInput = {
 
 export type ProjectSummary = {
   blockedCount: number;
+  doneCount: number;
+  latestActivityAt: string;
   inProgressCount: number;
   latestCompletedTaskTitle: string | null;
   progress: number;
   totalTasks: number;
+  todoCount: number;
 };
 
 export function createProject(
@@ -41,6 +44,7 @@ export function createProject(
 export function buildProjectSummary(project: Project, tasks: Task[]): ProjectSummary {
   const projectTasks = tasks.filter((task) => task.projectId === project.id);
   const totalTasks = projectTasks.length;
+  const todoCount = projectTasks.filter((task) => task.status === "todo").length;
   const inProgressCount = projectTasks.filter(
     (task) => task.status === "in_progress",
   ).length;
@@ -60,11 +64,22 @@ export function buildProjectSummary(project: Project, tasks: Task[]): ProjectSum
           (completedTasks.length / totalTasks) * 100,
         );
 
+  const latestActivityAt = projectTasks.reduce(
+    (latest, task) => {
+      const taskTimestamp = task.completionWrapUp?.completedAt ?? task.updatedAt;
+      return taskTimestamp.localeCompare(latest) > 0 ? taskTimestamp : latest;
+    },
+    project.updatedAt,
+  );
+
   return {
     blockedCount,
+    doneCount: completedTasks.length,
+    latestActivityAt,
     inProgressCount,
     latestCompletedTaskTitle: completedTasks[0]?.title ?? null,
     progress: project.manualProgressOverride ?? autoProgress,
     totalTasks,
+    todoCount,
   };
 }

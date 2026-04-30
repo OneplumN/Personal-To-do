@@ -174,6 +174,32 @@ Hover:
 Priority should feel warm and important, not alarming.
 Waiting should feel paused, not disabled.
 
+### Icon Actions
+
+Pure icon actions must use a shared visual language so repeated controls do not drift.
+
+Rules:
+- no filled background by default
+- no border or shadow by default
+- fixed button box: `28px - 32px`
+- fixed icon size: `16px`
+- hover changes color only, unless accessibility focus requires a subtle outline
+- tooltips / `aria-label` must name the action
+
+Semantic colors:
+- close, delete, remove: mac red `#ff5f57`
+- confirm, complete, add: mac green `#28c840`
+- edit, view, neutral utilities: muted gray-blue from the text token
+
+Icon meanings:
+- `+` means create / open add input
+- `✓` means confirm / complete
+- `−` means cancel an in-progress add flow
+- `×` means close, delete, or remove existing content
+- pencil means edit or open a detail editor
+
+Do not reuse `×` for canceling a temporary add input. Cancel should use `−` so it is visually distinct from destructive delete / close.
+
 ### Composer
 
 - inline but clear

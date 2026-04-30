@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { queueLocalSnapshotSync } from "../../lib/localPersistence/localSnapshotApi";
 import { projectRepository } from "../../lib/storage/projectRepository";
 import {
   createProject,
@@ -22,6 +23,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const project = createProject(input);
     await projectRepository.save(project);
     set({ projects: [project, ...get().projects] });
+    queueLocalSnapshotSync();
     return project;
   },
   isLoaded: false,
@@ -49,6 +51,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         project.id === projectId ? nextProject : project,
       ),
     });
+    queueLocalSnapshotSync();
     return nextProject;
   },
 }));

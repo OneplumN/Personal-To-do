@@ -6,5 +6,6 @@ export function renderWithRouter(
   ui: ReactElement,
   { route = "/" }: { route?: string } = {},
 ) {
+  window.history.pushState({}, "", route);
   return render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>);
 }

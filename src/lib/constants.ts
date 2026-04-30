@@ -1,4 +1,9 @@
-import type { Preferences } from "../types/preferences";
+import type {
+  AiProfile,
+  AiProviderPreset,
+  AiRoleTemplate,
+  Preferences,
+} from "../types/preferences";
 import type { ReportType } from "../types/report";
 import type { TaskPriority, TaskStatus } from "../types/task";
 
@@ -29,15 +34,60 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 };
 
 export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
+  custom: "报告",
   daily: "日报",
   monthly: "月报",
   weekly: "周报",
 };
 
+export const DEFAULT_AI_PROFILE_ID = "ai-profile-default";
+
+export const AI_PROVIDER_PRESETS: Record<
+  AiProviderPreset,
+  { endpoint: string; label: string }
+> = {
+  bigmodel: {
+    endpoint: "https://open.bigmodel.cn/api/paas/v4",
+    label: "智谱",
+  },
+  custom: {
+    endpoint: "",
+    label: "Custom",
+  },
+  deepseek: {
+    endpoint: "https://api.deepseek.com",
+    label: "DeepSeek",
+  },
+  kimi: {
+    endpoint: "https://api.moonshot.cn/v1",
+    label: "Kimi",
+  },
+};
+
+export const DEFAULT_AI_ROLE_TEMPLATES: AiRoleTemplate[] = [];
+
+export const DEFAULT_AI_PROFILES: AiProfile[] = [
+  {
+    apiKey: "",
+    endpoint: "",
+    extraBodyJson: "",
+    id: DEFAULT_AI_PROFILE_ID,
+    model: "",
+    models: [],
+    name: "API 1",
+    preset: "custom",
+  },
+];
+
 export const DEFAULT_PREFERENCES: Preferences = {
+  activeAiProfileId: DEFAULT_AI_PROFILE_ID,
+  activeAiRoleTemplateId: "",
   aiEndpoint: "",
   aiKey: "",
+  aiProfiles: DEFAULT_AI_PROFILES,
   aiRole: "",
+  aiRolePresets: [],
+  aiRoleTemplates: DEFAULT_AI_ROLE_TEMPLATES,
   id: "preferences",
   laneColors: {
     doing: "#5AC8FA",

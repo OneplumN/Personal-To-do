@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Modal } from "../common/Modal";
 
 export function TaskWorkspaceHeader({
   onCreateTask,
@@ -7,7 +8,6 @@ export function TaskWorkspaceHeader({
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -15,44 +15,72 @@ export function TaskWorkspaceHeader({
       return;
     }
     await onCreateTask({
-      body,
+      body: "",
       title,
     });
-    setBody("");
     setTitle("");
     setIsCreating(false);
   }
 
+  function handleTitleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
+
   return (
-    <div className="task-workspace-header">
-      <div>
-        <p className="eyebrow">Task Workspace</p>
-        <h2>任务工作区</h2>
-      </div>
-      <div className="task-workspace-header__actions">
-        <button onClick={() => setIsCreating((value) => !value)} type="button">
-          {isCreating ? "取消" : "+ 新建任务"}
-        </button>
+    <>
+      <div className="task-workspace-header">
+        <h2>TASK</h2>
+        <div className="task-workspace-header__actions">
+          <button
+            aria-label="新建任务"
+            className="task-workspace-header__create"
+            onClick={() => setIsCreating(true)}
+            title="新建任务"
+            type="button"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {isCreating ? (
-        <form className="task-create-form" onSubmit={handleSubmit}>
-          <input
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="任务标题"
-            value={title}
-          />
-          <textarea
-            onChange={(event) => setBody(event.target.value)}
-            placeholder="任务背景、目标或补充说明"
-            rows={3}
-            value={body}
-          />
-          <div className="task-create-form__actions">
-            <button type="submit">保存任务</button>
-          </div>
-        </form>
+        <Modal className="task-create-modal" onClose={() => setIsCreating(false)} title="新建任务">
+          <form className="modal__body task-create-modal__body" onSubmit={handleSubmit}>
+            <textarea
+              aria-label="任务标题"
+              autoFocus
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={handleTitleKeyDown}
+              placeholder="任务标题"
+              rows={2}
+              value={title}
+            />
+            <div className="modal__actions">
+              <button
+                aria-label="保存任务"
+                className="icon-button icon-action icon-action--success task-create-modal__save"
+                title="保存"
+                type="submit"
+              >
+                <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d="m5 12.5 4.5 4.5L19 7"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.4"
+                  />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </Modal>
       ) : null}
-    </div>
+    </>
   );
 }
