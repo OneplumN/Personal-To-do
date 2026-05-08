@@ -240,6 +240,9 @@ export function TaskDetailPanel({
       title: draftTitle,
     });
     await setStatus(currentTask.id, draftStatus);
+    if (draftStatus === "done") {
+      await removeFocusTask(currentTask.id);
+    }
   }
 
   async function handleSaveAndClose() {
@@ -381,6 +384,7 @@ export function TaskDetailPanel({
                 aria-label="备注"
                 className="detail-textarea"
                 onChange={(event) => setDraftNotes(event.target.value)}
+                placeholder="暂无备注"
                 rows={5}
                 value={draftNotes}
               />

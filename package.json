@@ -1,5 +1,5 @@
 {
-  "name": "personal-to-do",
+  "name": "yibu",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,11 +7,18 @@
     "dev": "vite",
     "build": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && vite build",
     "preview": "vite preview",
+    "tauri": "CARGO_TARGET_DIR=/tmp/yibu-tauri-target tauri",
+    "tauri:dev": "CARGO_TARGET_DIR=/tmp/yibu-tauri-target tauri dev",
+    "tauri:build": "CARGO_TARGET_DIR=/tmp/yibu-tauri-target tauri build",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "tsc --noEmit --pretty false && tsc --noEmit -p tsconfig.node.json --pretty false"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "@tauri-apps/plugin-sql": "^2.4.0",
     "idb": "^8.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -19,6 +26,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",

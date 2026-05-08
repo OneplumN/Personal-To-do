@@ -1,26 +1,20 @@
-import { getDatabase } from "./db";
+import { getStorageAdapter } from "./getStorageAdapter";
 import type { SavedReport } from "../../types/report";
 
 export const reportRepository = {
   async delete(reportId: string) {
-    const db = await getDatabase();
-    await db.delete("reports", reportId);
+    await getStorageAdapter().reports.delete(reportId);
   },
 
   async get(reportId: string) {
-    const db = await getDatabase();
-    return db.get("reports", reportId);
+    return getStorageAdapter().reports.get(reportId);
   },
 
   async list() {
-    const db = await getDatabase();
-    const reports = await db.getAll("reports");
-    return reports.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return getStorageAdapter().reports.list();
   },
 
   async save(report: SavedReport) {
-    const db = await getDatabase();
-    await db.put("reports", report);
-    return report;
+    return getStorageAdapter().reports.save(report);
   },
 };

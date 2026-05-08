@@ -1,33 +1,25 @@
-import { getDatabase } from "./db";
+import { getStorageAdapter } from "./getStorageAdapter";
 import type { Task } from "../../types/task";
 
 export const taskRepository = {
   async delete(taskId: string) {
-    const db = await getDatabase();
-    await db.delete("tasks", taskId);
+    await getStorageAdapter().tasks.delete(taskId);
   },
 
   async get(taskId: string) {
-    const db = await getDatabase();
-    return db.get("tasks", taskId);
+    return getStorageAdapter().tasks.get(taskId);
   },
 
   async listAll() {
-    const db = await getDatabase();
-    const tasks = await db.getAll("tasks");
-    return tasks.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    return getStorageAdapter().tasks.listAll();
   },
 
   async listByIds(taskIds: string[]) {
-    const db = await getDatabase();
-    const records = await Promise.all(taskIds.map((taskId) => db.get("tasks", taskId)));
-    return records.filter((task): task is Task => Boolean(task));
+    return getStorageAdapter().tasks.listByIds(taskIds);
   },
 
   async listByProject(projectId: string) {
-    const db = await getDatabase();
-    const tasks = await db.getAllFromIndex("tasks", "by-projectId", projectId);
-    return tasks.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    return getStorageAdapter().tasks.listByProject(projectId);
   },
 
   async listCompletedBetween(rangeStart: string, rangeEnd: string) {
@@ -45,8 +37,6 @@ export const taskRepository = {
   },
 
   async save(task: Task) {
-    const db = await getDatabase();
-    await db.put("tasks", task);
-    return task;
+    return getStorageAdapter().tasks.save(task);
   },
 };

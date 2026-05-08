@@ -114,7 +114,7 @@ export function ChecklistEditor({
   return (
     <section className="detail-section">
       <div className="detail-section__header">
-        <h4>Tasklist</h4>
+        <h4>清单</h4>
         <button
           aria-label="添加子任务"
           aria-expanded={isAdding}

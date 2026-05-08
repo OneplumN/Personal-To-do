@@ -1,12 +1,13 @@
-import { NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { HomePage } from "../features/home/HomePage";
-import { SettingsDialog } from "../features/settings/SettingsDialog";
+import { SettingsPage } from "../features/settings/SettingsPage";
 import { ToastProvider } from "../components/common/ToastProvider";
 import { usePreferenceStore } from "../features/preferences/preferenceStore";
 import { ProjectWorkspacePage } from "../features/projects/ProjectWorkspacePage";
 import { ReportCenterPage } from "../features/reports/ReportCenterPage";
 import { useAppBootstrap } from "./useAppBootstrap";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useDesktopShortcuts } from "../lib/desktop/useDesktopShortcuts";
 
 function PlaceholderPage({
   eyebrow,
@@ -60,9 +61,9 @@ function MoonIcon() {
 export function App() {
   const { ready } = useAppBootstrap();
   const location = useLocation();
+  const navigate = useNavigate();
   const preferences = usePreferenceStore((state) => state.preferences);
   const savePreferences = usePreferenceStore((state) => state.savePreferences);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const todayLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("zh-CN", {
@@ -88,6 +89,14 @@ export function App() {
     return `app-shell app-shell--${preferences.theme}${routeModifier}`;
   }, [isProjectWorkspace, preferences.theme]);
   const nextTheme = preferences.theme === "light" ? "dark" : "light";
+  useDesktopShortcuts({
+    onNew: () => {
+      window.dispatchEvent(new CustomEvent("personal-todo:new-primary"));
+    },
+    onOpenSettings: () => {
+      void navigate("/settings");
+    },
+  });
 
   return (
     <ToastProvider>
@@ -95,10 +104,22 @@ export function App() {
         <header className="app-header">
           <div className="app-header__intro">
             <p className="app-header__date">{todayLabel}</p>
-            <h1>Personal To-do</h1>
+            <h1>一步</h1>
           </div>
           <div className="app-header__actions">
             <nav aria-label="Primary" className="app-nav">
+              <button
+                aria-label={preferences.theme === "light" ? "深色" : "浅色"}
+                className="app-tool-button app-theme-toggle"
+                data-tooltip={preferences.theme === "light" ? "深色" : "浅色"}
+                onClick={() => {
+                  void savePreferences({ theme: nextTheme });
+                }}
+                title={preferences.theme === "light" ? "深色" : "浅色"}
+                type="button"
+              >
+                {preferences.theme === "light" ? <MoonIcon /> : <SunIcon />}
+              </button>
               <NavLink
                 className={({ isActive }) =>
                   isActive ? "app-nav__link app-nav__link--active" : "app-nav__link"
@@ -127,31 +148,16 @@ export function App() {
               >
                 Reports
               </NavLink>
-            </nav>
-            <div aria-label="Global tools" className="app-tools" role="group">
-              <button
-                aria-label={preferences.theme === "light" ? "深色" : "浅色"}
-                className="app-tool-button app-theme-toggle"
-                data-tooltip={preferences.theme === "light" ? "深色" : "浅色"}
-                onClick={() => {
-                  void savePreferences({ theme: nextTheme });
-                }}
-                title={preferences.theme === "light" ? "深色" : "浅色"}
-                type="button"
-              >
-                {preferences.theme === "light" ? <MoonIcon /> : <SunIcon />}
-              </button>
-              <button
-                aria-label="设置"
-                className="app-tool-button"
-                data-tooltip="设置"
-                onClick={() => setIsSettingsOpen(true)}
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "app-nav__link app-nav__link--active" : "app-nav__link"
+                }
                 title="设置"
-                type="button"
+                to="/settings"
               >
                 Settings
-              </button>
-            </div>
+              </NavLink>
+            </nav>
           </div>
         </header>
 
@@ -166,13 +172,12 @@ export function App() {
             <Routes>
               <Route element={<HomePage />} path="/" />
               <Route element={<ReportCenterPage />} path="/reports" />
+              <Route element={<SettingsPage />} path="/settings" />
               <Route element={<ProjectWorkspacePage />} path="/projects" />
               <Route element={<ProjectWorkspacePage />} path="/projects/:projectId" />
             </Routes>
           )}
         </main>
-
-        {isSettingsOpen ? <SettingsDialog onClose={() => setIsSettingsOpen(false)} /> : null}
       </div>
     </ToastProvider>
   );

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ProjectWorkspaceSidebar } from "../../components/projects/ProjectWorkspaceSidebar";
 import { TaskBoardView } from "../../components/tasks/TaskBoardView";
@@ -46,6 +46,7 @@ export function ProjectWorkspacePage() {
   const { showToast } = useToast();
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [createTaskRequestKey, setCreateTaskRequestKey] = useState(0);
   const selectedProjectId = projectId ?? searchParams.get("project") ?? projects[0]?.id ?? null;
   const focusTaskIds = useMemo(
     () => focusRefs.map((reference) => reference.taskId),
@@ -124,6 +125,17 @@ export function ProjectWorkspacePage() {
     void navigate(`/projects?project=${nextProjectId}`);
   }
 
+  useEffect(() => {
+    function handleOpenTaskCreate() {
+      setCreateTaskRequestKey((key) => key + 1);
+    }
+
+    window.addEventListener("personal-todo:new-primary", handleOpenTaskCreate);
+    return () => {
+      window.removeEventListener("personal-todo:new-primary", handleOpenTaskCreate);
+    };
+  }, []);
+
   return (
     <div className="project-workspace project-workspace--split-pane">
       <aside className="project-workspace__sidebar-shell">
@@ -150,6 +162,7 @@ export function ProjectWorkspacePage() {
       <div className="project-workspace__main">
         <div className="project-workspace__task-shell">
           <TaskWorkspaceHeader
+            createRequestKey={createTaskRequestKey}
             onCreateTask={async (input) => {
               await createTask({
                 body: input.body,

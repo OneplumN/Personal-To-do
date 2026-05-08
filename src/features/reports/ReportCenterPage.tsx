@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePreferenceStore } from "../preferences/preferenceStore";
 import { useProjectStore } from "../projects/projectStore";
-import { useReportStore } from "./reportStore";
 import { useTaskStore } from "../tasks/taskStore";
 import type { AiProfile } from "../../types/preferences";
 import type { Task } from "../../types/task";
@@ -80,20 +79,18 @@ type ReportComparison = {
 
 function ReportComparisonCard({
   comparison,
-  isSaved,
+  isRegenerating,
+  onCopy,
   onRegenerate,
-  onSave,
 }: {
   comparison: ReportComparison;
-  isSaved: boolean;
+  isRegenerating: boolean;
+  onCopy: (content: string) => Promise<void>;
   onRegenerate: () => Promise<void>;
-  onSave: (polishedContent: string) => Promise<void>;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
   const [polishedContent, setPolishedContent] = useState(comparison.report?.polishedContent ?? "");
 
   useEffect(() => {
-    setIsEditing(false);
     setPolishedContent(comparison.report?.polishedContent ?? "");
   }, [comparison.report?.id, comparison.report?.polishedContent]);
 
@@ -102,17 +99,17 @@ function ReportComparisonCard({
       <article className="report-compare-card report-compare-card--error">
         <header>
           <div>
-            <p>Model</p>
+            <p>模型</p>
             <h3>{comparison.profileName}</h3>
           </div>
-          <span>Failed</span>
+          <span>{isRegenerating ? "生成中" : "失败"}</span>
         </header>
         <div className="report-compare-error" role="alert">
           {comparison.error ?? "This model failed to generate a report."}
         </div>
         <footer>
-          <button onClick={() => void onRegenerate()} type="button">
-            Retry
+          <button disabled={isRegenerating} onClick={() => void onRegenerate()} type="button">
+            {isRegenerating ? "生成中..." : "重试"}
           </button>
         </footer>
       </article>
@@ -120,52 +117,26 @@ function ReportComparisonCard({
   }
 
   return (
-    <article
-      className={[
-        "report-compare-card",
-        isSaved ? "report-compare-card--saved" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <article className="report-compare-card">
       <header>
         <div>
-          <p>Model</p>
+          <p>模型</p>
           <h3>{comparison.profileName}</h3>
         </div>
-        <span>{isSaved ? "Used" : "Ready"}</span>
+        <span>{isRegenerating ? "生成中" : "已生成"}</span>
       </header>
-      {isEditing ? (
-        <label className="field">
-          <span>Output</span>
-          <textarea
-            aria-label={`Polished Content ${comparison.profileName}`}
-            onChange={(event) => setPolishedContent(event.target.value)}
-            rows={14}
-            value={polishedContent}
-          />
-        </label>
-      ) : (
-        <section
-          aria-label={`Polished Content ${comparison.profileName}`}
-          className="report-compare-preview"
-        >
-          {polishedContent}
-        </section>
-      )}
+      <section
+        aria-label={`Polished Content ${comparison.profileName}`}
+        className="report-compare-preview"
+      >
+        {polishedContent}
+      </section>
       <footer>
-        <button
-          aria-label={`${isEditing ? "Preview output" : "Edit output"} ${comparison.profileName}`}
-          onClick={() => setIsEditing((current) => !current)}
-          type="button"
-        >
-          {isEditing ? "Preview" : "Edit"}
+        <button disabled={isRegenerating} onClick={() => void onRegenerate()} type="button">
+          {isRegenerating ? "生成中..." : "重新生成"}
         </button>
-        <button onClick={() => void onRegenerate()} type="button">
-          Regenerate
-        </button>
-        <button onClick={() => void onSave(polishedContent)} type="button">
-          {isSaved ? "Using" : "Use this"}
+        <button disabled={isRegenerating} onClick={() => void onCopy(polishedContent)} type="button">
+          复制
         </button>
       </footer>
     </article>
@@ -177,10 +148,10 @@ function ReportComparisonSkeleton({ profileName }: { profileName: string }) {
     <article className="report-compare-card report-compare-card--loading">
       <header>
         <div>
-          <p>Model</p>
+          <p>模型</p>
           <h3>{profileName}</h3>
         </div>
-        <span>Generating</span>
+        <span>生成中</span>
       </header>
       <div className="report-compare-skeleton" aria-hidden="true">
         <i />
@@ -212,6 +183,13 @@ function formatDateKey(date: Date) {
 
 function formatDateInput(date: Date) {
   return formatDateKey(date);
+}
+
+function formatFullDateLabel(value: string) {
+  const date = parseDateInput(value);
+  return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
 }
 
 function formatMonthLabel(date: Date) {
@@ -300,6 +278,26 @@ function getCompletedTasksInRange(tasks: Task[], range: ReportRange) {
     .sort((left, right) => getCompletedAt(left).localeCompare(getCompletedAt(right)));
 }
 
+function getCompletedTaskGroups(tasks: Task[]) {
+  return tasks.reduce<Array<{ dateKey: string; label: string; tasks: Task[] }>>((groups, task) => {
+    const completedAt = new Date(getCompletedAt(task));
+    const dateKey = formatDateKey(completedAt);
+    const currentGroup = groups.find((group) => group.dateKey === dateKey);
+
+    if (currentGroup) {
+      currentGroup.tasks.push(task);
+      return groups;
+    }
+
+    groups.push({
+      dateKey,
+      label: formatDateLabel(completedAt),
+      tasks: [task],
+    });
+    return groups;
+  }, []);
+}
+
 function getCalendarDates(visibleMonth: Date) {
   const firstDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
   const start = getWeekStart(firstDay);
@@ -315,16 +313,15 @@ export function ReportCenterPage() {
   const projects = useProjectStore((state) => state.projects);
   const preferences = usePreferenceStore((state) => state.preferences);
   const tasks = useTaskStore((state) => state.tasks);
-  const saveReport = useReportStore((state) => state.saveReport);
   const { showToast } = useToast();
 
-  const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [hasPickedDate, setHasPickedDate] = useState(false);
   const [isGeneratingCompare, setIsGeneratingCompare] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [modelPickerValue, setModelPickerValue] = useState("");
   const [rangeAnchorDate, setRangeAnchorDate] = useState<string | null>(null);
+  const [regeneratingProfileIds, setRegeneratingProfileIds] = useState<string[]>([]);
   const [reportComparisons, setReportComparisons] = useState<ReportComparison[]>([]);
   const [selectedAiProfileIds, setSelectedAiProfileIds] = useState<string[]>([]);
   const [selectedAiRoleTemplateId, setSelectedAiRoleTemplateId] = useState("");
@@ -334,6 +331,7 @@ export function ReportCenterPage() {
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
+  const generationRunRef = useRef(0);
 
   const latestCompletedAt = useMemo(() => {
     return tasks
@@ -348,6 +346,14 @@ export function ReportCenterPage() {
   const completedTasks = useMemo(
     () => getCompletedTasksInRange(tasks, selectedRange),
     [selectedRange, tasks],
+  );
+  const completedTaskGroups = useMemo(
+    () => getCompletedTaskGroups(completedTasks),
+    [completedTasks],
+  );
+  const isSingleDayRange = useMemo(
+    () => formatDateKey(new Date(selectedRange.rangeStart)) === formatDateKey(new Date(selectedRange.rangeEnd)),
+    [selectedRange.rangeEnd, selectedRange.rangeStart],
   );
   const selectedAiProfiles = useMemo(
     () =>
@@ -431,9 +437,7 @@ export function ReportCenterPage() {
   );
   const comparisonColumnCount =
     reportComparisons.length > 0 ? reportComparisons.length : selectedAiProfiles.length;
-  const generateActionLabel = isGeneratingCompare
-    ? "生成中..."
-    : reportComparisons.length > 0
+  const generateActionLabel = reportComparisons.length > 0
       ? selectedAiProfiles.length > 1
         ? "重新对比"
         : "重新生成"
@@ -485,8 +489,8 @@ export function ReportCenterPage() {
   ]);
 
   useEffect(() => {
+    setRegeneratingProfileIds([]);
     setReportComparisons([]);
-    setActiveReportId(null);
   }, [reportInputSignature]);
 
   async function createComparisonReport(profile: AiProfile) {
@@ -513,6 +517,8 @@ export function ReportCenterPage() {
       return;
     }
 
+    const runId = generationRunRef.current + 1;
+    generationRunRef.current = runId;
     setIsGeneratingCompare(true);
     try {
       const nextComparisons = await Promise.all(
@@ -534,21 +540,30 @@ export function ReportCenterPage() {
         }),
       );
 
-      setReportComparisons(nextComparisons);
-      setActiveReportId(null);
+      if (generationRunRef.current === runId) {
+        setReportComparisons(nextComparisons);
+      }
     } finally {
-      setIsGeneratingCompare(false);
+      if (generationRunRef.current === runId) {
+        setIsGeneratingCompare(false);
+      }
     }
   }
 
   async function handleRegenerateComparison(profileId: string) {
     const profile = preferences.aiProfiles.find((item) => item.id === profileId);
-    if (!profile) {
+    if (!profile || regeneratingProfileIds.includes(profileId)) {
       return;
     }
 
+    const runId = generationRunRef.current;
+    setRegeneratingProfileIds((currentProfileIds) => [...currentProfileIds, profileId]);
+    showToast({ message: `正在重新生成：${profile.name}` });
     try {
       const report = await createComparisonReport(profile);
+      if (generationRunRef.current !== runId) {
+        return;
+      }
       setReportComparisons((currentComparisons) =>
         currentComparisons.map((comparison) =>
           comparison.profileId === profileId
@@ -560,8 +575,11 @@ export function ReportCenterPage() {
             : comparison,
         ),
       );
-      setActiveReportId(null);
+      showToast({ message: `已重新生成：${profile.name}` });
     } catch (error) {
+      if (generationRunRef.current !== runId) {
+        return;
+      }
       setReportComparisons((currentComparisons) =>
         currentComparisons.map((comparison) =>
           comparison.profileId === profileId
@@ -574,33 +592,60 @@ export function ReportCenterPage() {
             : comparison,
         ),
       );
+      showToast({ message: `重新生成失败：${profile.name}` });
+    } finally {
+      if (generationRunRef.current === runId) {
+        setRegeneratingProfileIds((currentProfileIds) =>
+          currentProfileIds.filter((currentProfileId) => currentProfileId !== profileId),
+        );
+      }
     }
   }
 
-  async function handleSaveComparison(comparison: ReportComparison, polishedContent: string) {
-    if (!comparison.report) {
+  async function handleCopyReport(content: string) {
+    const text = content.trim();
+    if (!text) {
+      showToast({ message: "没有可复制的报告内容" });
       return;
     }
 
-    const report: SavedReport = {
-      ...comparison.report,
-      polishedContent,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        showToast({ message: "报告已复制" });
+        return;
+      }
 
-    await saveReport(report);
-    setActiveReportId(report.id);
-    showToast({ message: "报告已保存" });
-    setReportComparisons((currentComparisons) =>
-      currentComparisons.map((currentComparison) =>
-        currentComparison.profileId === comparison.profileId
-          ? {
-              ...currentComparison,
-              report,
-            }
-          : currentComparison,
-      ),
-    );
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.left = "-9999px";
+      textarea.style.opacity = "0";
+      textarea.style.position = "fixed";
+      textarea.style.top = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const didCopy = document.execCommand("copy");
+      document.body.removeChild(textarea);
+
+      if (!didCopy) {
+        throw new Error("Copy command was not accepted.");
+      }
+
+      showToast({ message: "报告已复制" });
+    } catch {
+      showToast({ message: "复制失败，请手动选中文本复制" });
+    }
+  }
+
+  function handleCloseGenerateModal() {
+    generationRunRef.current += 1;
+    setIsGenerateModalOpen(false);
+    setIsGeneratingCompare(false);
+    setRegeneratingProfileIds([]);
+    setReportComparisons([]);
   }
 
   function handleAddComparisonModel(profileId: string) {
@@ -615,7 +660,6 @@ export function ReportCenterPage() {
     setSelectedAiProfileIds((currentProfileIds) => [...currentProfileIds, profileId]);
     setModelPickerValue("");
     setReportComparisons([]);
-    setActiveReportId(null);
   }
 
   function handleRemoveComparisonModel(profileId: string) {
@@ -629,14 +673,12 @@ export function ReportCenterPage() {
     setReportComparisons((currentComparisons) =>
       currentComparisons.filter((comparison) => comparison.profileId !== profileId),
     );
-    setActiveReportId(null);
   }
 
   function handleSelectDate(date: Date) {
     const nextDate = formatDateInput(date);
     setHasPickedDate(true);
     setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    setActiveReportId(null);
     setReportComparisons([]);
 
     if (!rangeAnchorDate) {
@@ -652,34 +694,6 @@ export function ReportCenterPage() {
     setRangeAnchorDate(null);
     setSelectedStartDate(start);
     setSelectedEndDate(end);
-  }
-
-  function handleStartDateChange(value: string) {
-    if (!value) {
-      return;
-    }
-
-    const nextDate = parseDateInput(value);
-    setHasPickedDate(true);
-    setRangeAnchorDate(null);
-    setSelectedStartDate(value);
-    setVisibleMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
-    setActiveReportId(null);
-    setReportComparisons([]);
-  }
-
-  function handleEndDateChange(value: string) {
-    if (!value) {
-      return;
-    }
-
-    const nextDate = parseDateInput(value);
-    setHasPickedDate(true);
-    setRangeAnchorDate(null);
-    setSelectedEndDate(value);
-    setVisibleMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
-    setActiveReportId(null);
-    setReportComparisons([]);
   }
 
   function handleMonthChange(direction: -1 | 1) {
@@ -700,12 +714,13 @@ export function ReportCenterPage() {
         >
           <span>TIME RANGE</span>
           <strong>{selectedRange.label}</strong>
-          <small>{completedTasks.length} completed</small>
         </button>
 
         <button
           className="report-generate-button"
+          disabled={completedTasks.length === 0}
           onClick={() => setIsGenerateModalOpen(true)}
+          title={completedTasks.length === 0 ? "暂无已完成任务，无法生成报告" : "Generate AI Report"}
           type="button"
         >
           <span>Generate AI Report</span>
@@ -720,48 +735,62 @@ export function ReportCenterPage() {
         <header className="report-workflow-header">
           <div>
             <p className="report-workspace__section-label">COMPLETED TASKS</p>
-            <h3>{selectedRange.label}</h3>
           </div>
-          <span>{completedTasks.length} tasks</span>
+          {isSingleDayRange ? null : <span>{selectedRange.label}</span>}
         </header>
 
         {completedTasks.length === 0 ? (
           <div className="empty-state report-completed-panel__empty">
-            <h3>No completed tasks</h3>
-            <p>当前时间范围没有已完成任务，可以切换起止日期查看。</p>
+            <h3>当前时间范围暂无已完成任务</h3>
+            <p>完成任务后，可在这里生成 AI 报告。</p>
           </div>
         ) : (
           <div className="report-completed-list">
-            {completedTasks.map((task) => {
-              const completedAt = new Date(getCompletedAt(task));
-              const preview = getTaskReportPreview(task);
-              return (
-                <article
-                  className="report-completed-item"
-                  key={task.id}
-                >
-                  <time dateTime={getCompletedAt(task)}>{formatTaskTime(completedAt)}</time>
-                  <div className="report-completed-item__content">
-                    <strong title={task.title}>{task.title}</strong>
-                    {preview ? (
-                      <p title={preview}>{preview}</p>
-                    ) : null}
-                  </div>
-                  <button
-                    aria-label="编辑"
-                    className="icon-button icon-action icon-action--neutral report-completed-edit"
-                    data-tooltip="编辑"
-                    onClick={() => setSelectedTaskId(task.id)}
-                    title="编辑"
-                    type="button"
-                  >
-                    <ReportEditIcon />
-                  </button>
-                </article>
-              );
-            })}
+            {completedTaskGroups.map((group) => (
+              <section className="report-completed-group" key={group.dateKey}>
+                {isSingleDayRange ? null : (
+                  <header className="report-completed-group__header">
+                    <span>{group.label}</span>
+                    <small>
+                      {group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}
+                    </small>
+                  </header>
+                )}
+                {group.tasks.map((task) => {
+                  const completedAt = new Date(getCompletedAt(task));
+                  const preview = getTaskReportPreview(task);
+                  return (
+                    <article
+                      className="report-completed-item"
+                      key={task.id}
+                    >
+                      <time dateTime={getCompletedAt(task)}>{formatTaskTime(completedAt)}</time>
+                      <div className="report-completed-item__content">
+                        <strong title={task.title}>{task.title}</strong>
+                        {preview ? (
+                          <p title={preview}>{preview}</p>
+                        ) : null}
+                      </div>
+                      <button
+                        aria-label="编辑"
+                        className="icon-button icon-action icon-action--neutral report-completed-edit"
+                        data-tooltip="编辑"
+                        onClick={() => setSelectedTaskId(task.id)}
+                        title="编辑"
+                        type="button"
+                      >
+                        <ReportEditIcon />
+                      </button>
+                    </article>
+                  );
+                })}
+              </section>
+            ))}
           </div>
         )}
+        <footer className="report-completed-summary">
+          {completedTasks.length} {completedTasks.length === 1 ? "completed task" : "completed tasks"}
+        </footer>
       </section>
 
       {isDateModalOpen ? (
@@ -775,22 +804,34 @@ export function ReportCenterPage() {
         >
           <div className="report-time-modal__body">
             <div className="report-date-range-fields">
-              <label className="field">
+              <div className="field">
                 <span>开始</span>
-                <input
-                  onChange={(event) => handleStartDateChange(event.target.value)}
-                  type="date"
-                  value={selectedStartDate}
-                />
-              </label>
-              <label className="field">
+                <button
+                  aria-label="查看开始日期"
+                  className="report-date-display"
+                  onClick={() => {
+                    setRangeAnchorDate(null);
+                    setVisibleMonth(parseDateInput(selectedStartDate));
+                  }}
+                  type="button"
+                >
+                  {formatFullDateLabel(selectedStartDate)}
+                </button>
+              </div>
+              <div className="field">
                 <span>结束</span>
-                <input
-                  onChange={(event) => handleEndDateChange(event.target.value)}
-                  type="date"
-                  value={selectedEndDate}
-                />
-              </label>
+                <button
+                  aria-label="查看结束日期"
+                  className="report-date-display"
+                  onClick={() => {
+                    setRangeAnchorDate(selectedStartDate);
+                    setVisibleMonth(parseDateInput(selectedEndDate));
+                  }}
+                  type="button"
+                >
+                  {formatFullDateLabel(selectedEndDate)}
+                </button>
+              </div>
             </div>
 
             <section className="report-calendar-card">
@@ -857,7 +898,10 @@ export function ReportCenterPage() {
           </div>
 
           <footer className="report-time-modal__footer">
-            <strong>{rangeAnchorDate ? `${selectedRange.label} · 选择结束日` : selectedRange.label}</strong>
+            <div>
+              <span>已选范围</span>
+              <strong>{rangeAnchorDate ? `${selectedRange.label} · 选择结束日` : selectedRange.label}</strong>
+            </div>
             <button
               onClick={() => {
                 setRangeAnchorDate(null);
@@ -874,13 +918,14 @@ export function ReportCenterPage() {
       {isGenerateModalOpen ? (
         <Modal
           className="report-generate-modal"
-          onClose={() => setIsGenerateModalOpen(false)}
+          onClose={handleCloseGenerateModal}
           title="生成报告"
         >
           <div className="report-generate-flow">
             <section className="report-generate-setup" aria-label="模型对比配置">
+              <p className="report-generate-setup-title">生成参数</p>
               <div className="report-generate-section">
-                <p className="report-generate-section__label">时间范围</p>
+                <p className="report-generate-section__label">日期</p>
                 <button
                   aria-label="选择报告时间范围"
                   className="report-generate-time-choice"
@@ -899,9 +944,9 @@ export function ReportCenterPage() {
                 <div className="report-generate-setup__header">
                   <div>
                     <p>模型</p>
-                    <h3>
+                    <span className="report-generate-model-count">
                       已选 {selectedAiProfiles.length}/{MAX_REPORT_COMPARE_MODELS}
-                    </h3>
+                    </span>
                   </div>
                 </div>
 
@@ -929,6 +974,7 @@ export function ReportCenterPage() {
                         <span className="sr-only">Add API</span>
                         <select
                           aria-label="Add API"
+                          title="添加模型"
                           onChange={(event) => handleAddComparisonModel(event.target.value)}
                           value={modelPickerValue}
                         >
@@ -942,7 +988,7 @@ export function ReportCenterPage() {
                       </label>
                     ) : (
                       <button
-                        aria-label="Add another API in Settings"
+                        aria-label="在设置中添加模型"
                         className="report-generate-model-add report-generate-model-add--disabled"
                         disabled
                         type="button"
@@ -955,30 +1001,46 @@ export function ReportCenterPage() {
               </div>
 
               <div className="report-generate-section report-generate-controls">
-                <label className="field report-generate-role">
-                  <span>角色</span>
-                  <select
-                    disabled={preferences.aiRoleTemplates.length === 0}
-                    onChange={(event) => {
-                      setSelectedAiRoleTemplateId(event.target.value);
-                      setReportComparisons([]);
-                      setActiveReportId(null);
-                    }}
-                    value={selectedAiRoleTemplate?.id ?? ""}
-                  >
-                    {preferences.aiRoleTemplates.length === 0 ? (
-                      <option value="">无角色</option>
-                    ) : (
-                      preferences.aiRoleTemplates.map((template) => (
-                        <option key={template.id} value={template.id}>
-                          {template.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
+                <section className="report-generate-role" aria-label="角色">
+                  <span className="report-generate-section__label">角色</span>
+                  {preferences.aiRoleTemplates.length === 0 ? (
+                    <div className="report-generate-role__empty">暂无角色模板</div>
+                  ) : (
+                    <div className="report-generate-role__list">
+                      {preferences.aiRoleTemplates.map((template) => {
+                        const isSelected = selectedAiRoleTemplate?.id === template.id;
+                        return (
+                          <button
+                            aria-pressed={isSelected}
+                            className={
+                              isSelected
+                                ? "report-generate-role__item report-generate-role__item--active"
+                                : "report-generate-role__item"
+                            }
+                            key={template.id}
+                            onClick={() => {
+                              setSelectedAiRoleTemplateId(template.id);
+                              setReportComparisons([]);
+                            }}
+                            type="button"
+                          >
+                            <span>
+                              <strong>{template.name}</strong>
+                            </span>
+                            {isSelected ? <b>当前</b> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
                 <button
-                  className="report-generate-modal__action"
+                  className={[
+                    "report-generate-modal__action",
+                    reportComparisons.length > 0 ? "report-generate-modal__action--secondary" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   disabled={
                     selectedAiProfiles.length === 0 ||
                     completedTasks.length === 0 ||
@@ -999,7 +1061,7 @@ export function ReportCenterPage() {
                   <strong>
                     {reportComparisons.length > 0
                       ? `${reportComparisons.length} 版草稿`
-                      : "暂无草稿"}
+                      : "报告内容"}
                   </strong>
                 </div>
               </header>
@@ -1017,10 +1079,10 @@ export function ReportCenterPage() {
                     ? reportComparisons.map((comparison) => (
                         <ReportComparisonCard
                           comparison={comparison}
-                          isSaved={Boolean(comparison.report && activeReportId === comparison.report.id)}
+                          isRegenerating={regeneratingProfileIds.includes(comparison.profileId)}
                           key={comparison.profileId}
+                          onCopy={handleCopyReport}
                           onRegenerate={() => handleRegenerateComparison(comparison.profileId)}
-                          onSave={(polishedContent) => handleSaveComparison(comparison, polishedContent)}
                         />
                       ))
                     : selectedAiProfiles.map((profile) => (
@@ -1028,7 +1090,10 @@ export function ReportCenterPage() {
                       ))}
                 </div>
               ) : (
-                <div className="report-compare-empty" aria-hidden="true" />
+                <div className="report-compare-empty">
+                  <span>暂无报告内容</span>
+                  <p>选择模型和角色后，点击生成。</p>
+                </div>
               )}
             </section>
           </div>

@@ -7,7 +7,9 @@ import react from "@vitejs/plugin-react";
 type AiProxyPayload = {
   apiKey?: string;
   body?: unknown;
+  chatEndpoint?: string;
   endpoint?: string;
+  modelsEndpoint?: string;
 };
 
 const LOCAL_SNAPSHOT_PATH = path.resolve(".local-data/app-snapshot.json");
@@ -51,6 +53,18 @@ function normalizeProxyEndpoint(endpoint: string, suffix: "chat/completions" | "
   return `${trimmedEndpoint}/${suffix}`;
 }
 
+function getProxyTargetEndpoint(payload: AiProxyPayload, suffix: "chat/completions" | "models") {
+  if (suffix === "chat/completions" && payload.chatEndpoint?.trim()) {
+    return payload.chatEndpoint.trim().replace(/\/+$/, "");
+  }
+
+  if (suffix === "models" && payload.modelsEndpoint?.trim()) {
+    return payload.modelsEndpoint.trim().replace(/\/+$/, "");
+  }
+
+  return normalizeProxyEndpoint(payload.endpoint ?? "", suffix);
+}
+
 async function proxyAiRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -65,7 +79,7 @@ async function proxyAiRequest(
       return;
     }
 
-    const upstreamResponse = await fetch(normalizeProxyEndpoint(endpoint, suffix), {
+    const upstreamResponse = await fetch(getProxyTargetEndpoint(payload, suffix), {
       body: suffix === "chat/completions" ? JSON.stringify(payload.body ?? {}) : undefined,
       headers: {
         ...(suffix === "chat/completions" ? { "Content-Type": "application/json" } : {}),
@@ -157,6 +171,7 @@ export default defineConfig({
     },
   ],
   test: {
+    exclude: ["**/node_modules/**", "**/dist/**", "**/._*"],
     environment: "jsdom",
     setupFiles: ["./src/tests/setup.ts"],
     css: true,

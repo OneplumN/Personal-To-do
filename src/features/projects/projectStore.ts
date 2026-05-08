@@ -3,6 +3,7 @@ import { queueLocalSnapshotSync } from "../../lib/localPersistence/localSnapshot
 import { projectRepository } from "../../lib/storage/projectRepository";
 import {
   createProject,
+  sortProjects,
   type Project,
   type ProjectCreateInput,
 } from "../../types/project";
@@ -12,6 +13,7 @@ type ProjectState = {
   isLoaded: boolean;
   loadProjects: () => Promise<Project[]>;
   projects: Project[];
+  reorderProject: (projectId: string, toIndex: number) => Promise<void>;
   updateProject: (
     projectId: string,
     update: Partial<Omit<Project, "createdAt" | "id">>,
@@ -33,6 +35,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     return projects;
   },
   projects: [],
+  async reorderProject(projectId, toIndex) {
+    const projects = sortProjects(get().projects);
+    const fromIndex = projects.findIndex((project) => project.id === projectId);
+    if (fromIndex === -1 || fromIndex === toIndex) {
+      return;
+    }
+
+    const boundedIndex = Math.max(0, Math.min(toIndex, projects.length - 1));
+    const [movedProject] = projects.splice(fromIndex, 1);
+    projects.splice(boundedIndex, 0, movedProject);
+    const now = new Date().toISOString();
+    const nextProjects = projects.map((project, index) => ({
+      ...project,
+      sortOrder: index,
+      updatedAt: project.id === projectId ? now : project.updatedAt,
+    }));
+
+    await Promise.all(nextProjects.map((project) => projectRepository.save(project)));
+    set({ projects: nextProjects });
+    queueLocalSnapshotSync();
+  },
   async updateProject(projectId, update) {
     const current = get().projects.find((project) => project.id === projectId);
 

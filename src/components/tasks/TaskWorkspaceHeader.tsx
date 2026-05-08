@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "../common/Modal";
 
 export function TaskWorkspaceHeader({
+  createRequestKey,
   onCreateTask,
 }: {
+  createRequestKey?: number;
   onCreateTask: (input: { body: string; title: string }) => Promise<void>;
 }) {
   const [isCreating, setIsCreating] = useState(false);
@@ -30,6 +32,13 @@ export function TaskWorkspaceHeader({
     event.preventDefault();
     event.currentTarget.form?.requestSubmit();
   }
+
+  useEffect(() => {
+    if (createRequestKey === undefined || createRequestKey === 0) {
+      return;
+    }
+    setIsCreating(true);
+  }, [createRequestKey]);
 
   return (
     <>

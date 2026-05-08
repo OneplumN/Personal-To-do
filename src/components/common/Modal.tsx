@@ -1,4 +1,7 @@
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+
+const modalStack: symbol[] = [];
 
 export function Modal({
   children,
@@ -12,6 +15,51 @@ export function Modal({
   title: string;
 }) {
   const modalClassName = className ? `modal ${className}` : "modal";
+  const modalIdRef = useRef<symbol | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  if (modalIdRef.current === null) {
+    modalIdRef.current = Symbol(title);
+  }
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const modalId = modalIdRef.current;
+
+    if (modalId === null) {
+      return undefined;
+    }
+
+    modalStack.push(modalId);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || event.defaultPrevented) {
+        return;
+      }
+
+      if (modalStack[modalStack.length - 1] !== modalId) {
+        return;
+      }
+
+      event.preventDefault();
+      onCloseRef.current();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      const modalIndex = modalStack.lastIndexOf(modalId);
+
+      if (modalIndex >= 0) {
+        modalStack.splice(modalIndex, 1);
+      }
+
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   return (
     <div className="modal-backdrop" role="presentation">

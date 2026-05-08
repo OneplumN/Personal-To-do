@@ -1,9 +1,12 @@
 node_modules
 dist
 .DS_Store
+._*
 coverage
 .vite
 .local-data
 *.tsbuildinfo
+src-tauri/target
+src-tauri/gen
 vite.config.js
 vite.config.d.ts

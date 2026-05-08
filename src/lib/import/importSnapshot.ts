@@ -1,5 +1,5 @@
-import { resetDatabase } from "../storage/db";
 import { focusRepository } from "../storage/focusRepository";
+import { getStorageAdapter } from "../storage/getStorageAdapter";
 import { preferenceRepository } from "../storage/preferenceRepository";
 import { projectRepository } from "../storage/projectRepository";
 import { reportRepository } from "../storage/reportRepository";
@@ -27,7 +27,7 @@ export async function importSnapshot(snapshot: unknown) {
     throw new Error("导入文件格式无效。");
   }
 
-  await resetDatabase();
+  await getStorageAdapter().reset();
 
   await Promise.all(snapshot.projects.map((project) => projectRepository.save(project)));
   await Promise.all(snapshot.tasks.map((task) => taskRepository.save(task)));

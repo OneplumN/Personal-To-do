@@ -33,12 +33,34 @@ function getProjectTone(projectId: string) {
   return PROJECT_CARD_TONES[hash % PROJECT_CARD_TONES.length];
 }
 
+function getProjectProgressTone(progress: number) {
+  if (progress <= 0) {
+    return "color-mix(in srgb, var(--text-quiet) 72%, var(--lane-doing))";
+  }
+
+  if (progress >= 80) {
+    return "var(--lane-done)";
+  }
+
+  if (progress >= 45) {
+    return "var(--lane-doing)";
+  }
+
+  return "var(--lane-task)";
+}
+
 export function ProjectCard({
+  dragMode = "idle",
+  dropPosition = "before",
+  onBeginDrag,
   onEdit,
   onOpen,
   project,
   tasks,
 }: {
+  dragMode?: "dragging" | "idle" | "target";
+  dropPosition?: "after" | "before";
+  onBeginDrag?: (event: React.PointerEvent<HTMLElement>, projectId: string) => void;
   onEdit: (projectId: string) => void;
   onOpen: (projectId: string) => void;
   project: Project;
@@ -47,14 +69,24 @@ export function ProjectCard({
   const summary = buildProjectSummary(project, tasks);
   const progressLabel = String(summary.progress).padStart(2, "0");
   const tone = getProjectTone(project.id);
+  const progressTone = getProjectProgressTone(summary.progress);
 
   return (
     <article
-      className="project-card"
+      className={
+        dragMode === "dragging"
+          ? "project-card project-card--dragging"
+          : dragMode === "target"
+            ? `project-card project-card--target project-card--drop-${dropPosition}`
+            : "project-card"
+      }
+      data-sortable-id={project.id}
+      onPointerDown={(event) => onBeginDrag?.(event, project.id)}
       style={
         {
           "--project-card-accent": tone.accent,
           "--project-card-border": tone.border,
+          "--project-card-progress-accent": progressTone,
           "--project-card-surface": tone.surface,
         } as CSSProperties
       }
@@ -84,6 +116,7 @@ export function ProjectCard({
           <button
             aria-label="编辑"
             className="project-card__detail-button"
+            data-no-drag="true"
             data-tooltip="编辑"
             onClick={() => onEdit(project.id)}
             title="编辑"
@@ -115,6 +148,7 @@ export function ProjectCard({
           <button
             aria-label="进入"
             className="project-card__detail-button"
+            data-no-drag="true"
             data-tooltip="进入"
             onClick={() => onOpen(project.id)}
             title="进入"

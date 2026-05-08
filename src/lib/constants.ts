@@ -44,23 +44,37 @@ export const DEFAULT_AI_PROFILE_ID = "ai-profile-default";
 
 export const AI_PROVIDER_PRESETS: Record<
   AiProviderPreset,
-  { endpoint: string; label: string }
+  { endpoint: string; label: string; modelsEndpoint: string }
 > = {
   bigmodel: {
     endpoint: "https://open.bigmodel.cn/api/paas/v4",
     label: "智谱",
+    modelsEndpoint: "https://open.bigmodel.cn/api/paas/v4/models",
   },
   custom: {
     endpoint: "",
-    label: "Custom",
+    label: "自定义",
+    modelsEndpoint: "",
   },
   deepseek: {
     endpoint: "https://api.deepseek.com",
     label: "DeepSeek",
+    modelsEndpoint: "https://api.deepseek.com/models",
   },
   kimi: {
     endpoint: "https://api.moonshot.cn/v1",
     label: "Kimi",
+    modelsEndpoint: "https://api.moonshot.cn/v1/models",
+  },
+  minimax: {
+    endpoint: "https://api.minimaxi.com/v1",
+    label: "MiniMax",
+    modelsEndpoint: "https://api.minimaxi.com/v1/models",
+  },
+  qwen: {
+    endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    label: "千问",
+    modelsEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
   },
 };
 
@@ -74,7 +88,8 @@ export const DEFAULT_AI_PROFILES: AiProfile[] = [
     id: DEFAULT_AI_PROFILE_ID,
     model: "",
     models: [],
-    name: "API 1",
+    modelsEndpoint: "",
+    name: "服务商 1",
     preset: "custom",
   },
 ];
@@ -98,5 +113,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   updatedAt: new Date(0).toISOString(),
 };
 
-export const APP_DB_NAME = "personal-to-do-db";
+export const APP_DB_NAME = "yibu-db";
 export const APP_DB_VERSION = 1;

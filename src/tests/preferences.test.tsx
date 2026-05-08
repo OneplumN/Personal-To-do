@@ -44,22 +44,34 @@ describe("preferences store", () => {
     expect(saved.aiRole).toBe("请输出日报");
   });
 
-  test("opens settings as a modal and supports close interactions", async () => {
+  test("opens settings as a page and supports close interactions", async () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
-    expect(await screen.findByRole("dialog", { name: "设置" })).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    expect(await screen.findByRole("heading", { name: "设置" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "主题" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("AI Provider")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("AI Service")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "DeepSeek 未配置" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Request Preview")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Advanced JSON")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Check" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "保存设置" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "关闭设置" })).toBeInTheDocument();
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "设置" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "测试连接" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Account 个人信息" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Desktop 窗口与快捷键" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "大模型 服务商与模型" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await user.click(screen.getByRole("button", { name: "数据 备份与数据库" }));
+    expect(screen.getByRole("button", { name: "创建备份" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Import/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "关闭设置" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "关闭" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "关闭" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "设置" })).not.toBeInTheDocument();
+    });
   });
 
   test("toggles theme from the app navigation", async () => {
@@ -78,13 +90,14 @@ describe("preferences store", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
-    await screen.findByRole("dialog", { name: "设置" });
-    expect(screen.getByRole("button", { name: "保存设置" })).toBeDisabled();
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await screen.findByRole("heading", { name: "设置" });
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "外观 主题与颜色" }));
     await user.clear(await screen.findByLabelText("Doing color"));
     await user.type(screen.getByLabelText("Doing color"), "#123456");
-    expect(screen.getByRole("button", { name: "保存设置" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "保存设置" }));
+    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
       expect(usePreferenceStore.getState().preferences.laneColors.doing).toBe("#123456");
@@ -95,80 +108,112 @@ describe("preferences store", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await screen.findByRole("heading", { name: "设置" });
+    await user.click(screen.getByRole("button", { name: /提示词库/ }));
     expect(screen.queryByRole("button", { name: "极简执行" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Add role" }));
-    await user.clear(await screen.findByLabelText("AI Role Name"));
-    await user.type(screen.getByLabelText("AI Role Name"), "写日报");
-    await user.type(screen.getByLabelText("AI Role"), "写日报");
-    expect(screen.getByRole("button", { name: "保存设置" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "创建 Role" }));
+    await user.click(screen.getByRole("button", { name: "新增提示词" }));
+    await user.clear(await screen.findByLabelText("提示词名称"));
+    await user.type(screen.getByLabelText("提示词名称"), "写日报");
+    await user.type(screen.getByLabelText("提示词"), "写日报");
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "创建提示词" }));
     await waitFor(() => {
-      expect(screen.getByText("Role 已创建并保存。")).toBeInTheDocument();
+      expect(screen.getByText("角色已创建并保存。")).toBeInTheDocument();
       expect(usePreferenceStore.getState().preferences.aiRolePresets[0]?.label).toBe(
         "写日报",
       );
     });
 
-    await user.click(screen.getByRole("button", { name: "Add role" }));
-    await user.clear(screen.getByLabelText("AI Role Name"));
-    await user.type(screen.getByLabelText("AI Role Name"), "拆任务");
-    await user.type(screen.getByLabelText("AI Role"), "拆任务");
-    await user.click(screen.getByRole("button", { name: "创建 Role" }));
+    await user.click(screen.getByRole("button", { name: "新增提示词" }));
+    await user.clear(screen.getByLabelText("提示词名称"));
+    await user.type(screen.getByLabelText("提示词名称"), "拆任务");
+    await user.type(screen.getByLabelText("提示词"), "拆任务");
+    await user.click(screen.getByRole("button", { name: "创建提示词" }));
 
-    await user.click(screen.getByRole("button", { name: "写日报" }));
+    await user.click(screen.getByRole("button", { name: "写日报 使用" }));
     await waitFor(() => {
-      expect(screen.getByLabelText("AI Role")).toHaveValue("写日报");
+      expect(screen.getByLabelText("提示词")).toHaveValue("写日报");
     });
-    await user.click(screen.getByRole("button", { name: "拆任务" }));
+    await user.click(screen.getByRole("button", { name: "拆任务 使用" }));
     await waitFor(() => {
-      expect(screen.getByLabelText("AI Role")).toHaveValue("拆任务");
+      expect(screen.getByLabelText("提示词")).toHaveValue("拆任务");
     });
 
     await waitFor(() => {
       expect(usePreferenceStore.getState().preferences.aiRolePresets).toHaveLength(2);
     });
-    expect(screen.getByRole("button", { name: "保存设置" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   });
 
   test("saves custom AI role presets from settings", async () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
-    await user.selectOptions(await screen.findByLabelText("AI Service"), "deepseek");
-    expect(screen.getByLabelText("AI Endpoint")).toHaveValue("https://api.deepseek.com");
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: "DeepSeek 未配置" }));
+    expect(screen.getByLabelText("AI 服务地址")).toHaveValue("https://api.deepseek.com");
+    expect(screen.getByLabelText("AI 模型列表地址")).toHaveValue(
+      "https://api.deepseek.com/models",
+    );
+    await user.click(screen.getByRole("button", { name: "MiniMax 未配置" }));
+    expect(screen.getByLabelText("AI 服务地址")).toHaveValue("https://api.minimaxi.com/v1");
+    expect(screen.getByLabelText("AI 模型列表地址")).toHaveValue(
+      "https://api.minimaxi.com/v1/models",
+    );
+    await user.click(screen.getByRole("button", { name: "千问 未配置" }));
+    expect(screen.getByLabelText("AI 服务地址")).toHaveValue(
+      "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    );
+    expect(screen.getByLabelText("AI 模型列表地址")).toHaveValue(
+      "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
+    );
+    await user.click(screen.getByRole("button", { name: "DeepSeek 已配置" }));
     expect(screen.queryByRole("button", { name: "deepseek-chat" })).not.toBeInTheDocument();
-    await user.type(screen.getByLabelText("AI Model"), "deepseek-chat");
-    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.type(screen.getByLabelText("AI 模型"), "deepseek-chat");
+    await user.click(screen.getByRole("button", { name: "添加模型" }));
     expect(screen.getByRole("button", { name: "deepseek-chat" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    await user.clear(screen.getByLabelText("AI Endpoint"));
-    await user.type(await screen.findByLabelText("AI Endpoint"), "https://draft.example.com");
-    expect(screen.getByRole("button", { name: "保存设置" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Add role" }));
-    await user.clear(await screen.findByLabelText("AI Role Name"));
-    await user.type(screen.getByLabelText("AI Role Name"), "写周报");
-    await user.type(screen.getByLabelText("AI Role"), "写周报");
-    await user.click(screen.getByRole("button", { name: "创建 Role" }));
+    await user.click(screen.getByRole("button", { name: "新增服务商" }));
+    await user.clear(screen.getByLabelText("AI 服务地址"));
+    await user.type(await screen.findByLabelText("AI 服务地址"), "https://draft.example.com");
+    await user.type(
+      screen.getByLabelText("AI 模型列表地址"),
+      "https://draft.example.com/v1/models",
+    );
+    await user.click(screen.getByRole("button", { name: "创建服务商" }));
     await waitFor(() => {
-      expect(screen.getByText("Role 已创建并保存。")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "保存设置" })).toBeEnabled();
+      expect(screen.getByText("服务商已创建并保存。")).toBeInTheDocument();
     });
-    await user.click(screen.getByRole("button", { name: "保存设置" }));
+    await user.click(screen.getByRole("button", { name: /提示词库/ }));
+    await user.click(screen.getByRole("button", { name: "新增提示词" }));
+    await user.clear(await screen.findByLabelText("提示词名称"));
+    await user.type(screen.getByLabelText("提示词名称"), "写周报");
+    await user.type(screen.getByLabelText("提示词"), "写周报");
+    await user.click(screen.getByRole("button", { name: "创建提示词" }));
+    await waitFor(() => {
+      expect(screen.getByText("角色已创建并保存。")).toBeInTheDocument();
+    });
 
     await waitFor(() => {
       expect(usePreferenceStore.getState().preferences.aiRolePresets[0]?.prompt).toBe(
         "写周报",
       );
     });
-    expect(screen.getByRole("button", { name: "写周报" })).toBeInTheDocument();
-    expect(screen.getByLabelText("AI Endpoint")).toHaveValue("https://draft.example.com");
+    expect(screen.getByRole("button", { name: "写周报 当前" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "大模型 服务商与模型" }));
+    expect(screen.getByLabelText("AI 服务地址")).toHaveValue("https://draft.example.com");
+    expect(screen.getByLabelText("AI 模型列表地址")).toHaveValue(
+      "https://draft.example.com/v1/models",
+    );
 
-    await user.click(screen.getByRole("button", { name: "Delete role 写周报" }));
+    await user.click(screen.getByRole("button", { name: /提示词库/ }));
+    await user.click(screen.getByRole("button", { name: "删除提示词 写周报" }));
+    expect(screen.getByRole("button", { name: "写周报 再次点击删除" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "删除提示词 写周报" }));
 
     await waitFor(() => {
       expect(usePreferenceStore.getState().preferences.aiRolePresets).toHaveLength(0);
@@ -179,35 +224,40 @@ describe("preferences store", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
+    await user.click(screen.getByRole("link", { name: "Settings" }));
 
-    await user.click(screen.getByRole("button", { name: "Add API" }));
-    await user.clear(await screen.findByLabelText("AI Profile Name"));
-    await user.type(screen.getByLabelText("AI Profile Name"), "Temporary API");
-    await user.click(screen.getByRole("button", { name: "Cancel API" }));
-    expect(screen.queryByRole("button", { name: "Temporary API" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "新增服务商" }));
+    await user.clear(await screen.findByLabelText("AI 配置名称"));
+    await user.type(screen.getByLabelText("AI 配置名称"), "临时服务商");
+    await user.click(screen.getByRole("button", { name: "取消服务商" }));
+    expect(screen.queryByRole("button", { name: "临时服务商" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Add role" }));
-    await user.clear(await screen.findByLabelText("AI Role Name"));
-    await user.type(screen.getByLabelText("AI Role Name"), "Temporary Role");
-    await user.click(screen.getByRole("button", { name: "Cancel role" }));
-    expect(screen.queryByRole("button", { name: "Temporary Role" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /提示词库/ }));
+    await user.click(screen.getByRole("button", { name: "新增提示词" }));
+    await user.clear(await screen.findByLabelText("提示词名称"));
+    await user.type(screen.getByLabelText("提示词名称"), "临时角色");
+    await user.click(screen.getByRole("button", { name: "取消提示词" }));
+    expect(screen.queryByRole("button", { name: /临时角色/ })).not.toBeInTheDocument();
   });
 
   test("switches AI API profiles with separate keys", async () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
-    await user.type(await screen.findByLabelText("AI Key"), "default-key");
-    await user.click(screen.getByRole("button", { name: "Add API" }));
-    await user.clear(screen.getByLabelText("AI Profile Name"));
-    await user.type(screen.getByLabelText("AI Profile Name"), "Backup");
-    await user.type(screen.getByLabelText("AI Model"), "backup-model");
-    await user.click(screen.getByRole("button", { name: "Add" }));
-    await user.type(screen.getByLabelText("AI Endpoint"), "https://backup.example.com/v1");
-    await user.type(screen.getByLabelText("AI Key"), "backup-key");
-    await user.click(screen.getByRole("button", { name: "创建 API" }));
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.type(await screen.findByLabelText("AI 密钥"), "default-key");
+    await user.click(screen.getByRole("button", { name: "新增服务商" }));
+    await user.clear(screen.getByLabelText("AI 配置名称"));
+    await user.type(screen.getByLabelText("AI 配置名称"), "Backup");
+    await user.type(screen.getByLabelText("AI 模型"), "backup-model");
+    await user.click(screen.getByRole("button", { name: "添加模型" }));
+    await user.type(screen.getByLabelText("AI 服务地址"), "https://backup.example.com/v1");
+    await user.type(
+      screen.getByLabelText("AI 模型列表地址"),
+      "https://backup.example.com/v1/models",
+    );
+    await user.type(screen.getByLabelText("AI 密钥"), "backup-key");
+    await user.click(screen.getByRole("button", { name: "创建服务商" }));
 
     await waitFor(() => {
       expect(usePreferenceStore.getState().preferences.aiProfiles).toHaveLength(2);
@@ -217,16 +267,20 @@ describe("preferences store", () => {
       (profile) => profile.name === "Backup",
     );
     expect(persistedBackup?.endpoint).toBe("https://backup.example.com/v1");
+    expect(persistedBackup?.modelsEndpoint).toBe("https://backup.example.com/v1/models");
     expect(persistedBackup?.apiKey).toBe("backup-key");
     expect(persistedAfterConfirm.activeAiProfileId).toBe(persistedBackup?.id);
 
-    await user.click(screen.getByRole("button", { name: "API 1" }));
-    expect(screen.getByLabelText("AI Key")).toHaveValue("default-key");
+    await user.click(screen.getByRole("button", { name: "服务商 1" }));
+    expect(screen.getByLabelText("AI 密钥")).toHaveValue("default-key");
 
     await user.click(screen.getByRole("button", { name: "Backup" }));
-    expect(screen.getByLabelText("AI Key")).toHaveValue("backup-key");
-    expect(screen.getByLabelText("AI Endpoint")).toHaveValue(
+    expect(screen.getByLabelText("AI 密钥")).toHaveValue("backup-key");
+    expect(screen.getByLabelText("AI 服务地址")).toHaveValue(
       "https://backup.example.com/v1",
+    );
+    expect(screen.getByLabelText("AI 模型列表地址")).toHaveValue(
+      "https://backup.example.com/v1/models",
     );
     expect(screen.getByRole("button", { name: "backup-model" })).toHaveAttribute(
       "aria-pressed",
@@ -234,8 +288,6 @@ describe("preferences store", () => {
     );
     expect(screen.queryByLabelText("Advanced JSON")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Request Preview")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "保存设置" }));
 
     await waitFor(() => {
       const preferences = usePreferenceStore.getState().preferences;
@@ -252,13 +304,13 @@ describe("preferences store", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
+    await user.click(screen.getByRole("link", { name: "Settings" }));
 
-    expect(await screen.findByLabelText("AI Key")).toHaveAttribute("type", "password");
-    await user.click(screen.getByRole("button", { name: "显示 AI Key" }));
-    expect(screen.getByLabelText("AI Key")).toHaveAttribute("type", "text");
-    await user.click(screen.getByRole("button", { name: "隐藏 AI Key" }));
-    expect(screen.getByLabelText("AI Key")).toHaveAttribute("type", "password");
+    expect(await screen.findByLabelText("AI 密钥")).toHaveAttribute("type", "password");
+    await user.click(screen.getByRole("button", { name: "显示 AI 密钥" }));
+    expect(screen.getByLabelText("AI 密钥")).toHaveAttribute("type", "text");
+    await user.click(screen.getByRole("button", { name: "隐藏 AI 密钥" }));
+    expect(screen.getByLabelText("AI 密钥")).toHaveAttribute("type", "password");
   });
 
   test("tests an AI API profile from settings", async () => {
@@ -273,10 +325,10 @@ describe("preferences store", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
-    await user.selectOptions(await screen.findByLabelText("AI Service"), "deepseek");
-    await user.type(screen.getByLabelText("AI Model"), "deepseek-chat");
-    await user.click(screen.getByRole("button", { name: "Check" }));
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: "DeepSeek 未配置" }));
+    await user.type(screen.getByLabelText("AI 模型"), "deepseek-chat");
+    await user.click(screen.getByRole("button", { name: "测试连接" }));
 
     await waitFor(() => {
       expect(screen.getByText(/200 OK/)).toBeInTheDocument();
@@ -303,11 +355,12 @@ describe("preferences store", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await user.click(screen.getByRole("button", { name: "设置" }));
-    await user.selectOptions(await screen.findByLabelText("AI Service"), "kimi");
-    await user.click(screen.getByRole("button", { name: "Fetch" }));
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: "Kimi 未配置" }));
+    await user.click(screen.getByRole("button", { name: "获取模型" }));
+    expect(await screen.findByText("来源：https://api.moonshot.cn/v1/models")).toBeInTheDocument();
     await user.click(
-      await screen.findByRole("button", { name: "Add fetched model moonshot-v1-8k" }),
+      await screen.findByRole("button", { name: "添加获取到的模型 moonshot-v1-8k" }),
     );
 
     expect(screen.getByRole("button", { name: "moonshot-v1-8k" })).toHaveAttribute(

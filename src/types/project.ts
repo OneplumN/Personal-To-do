@@ -6,6 +6,7 @@ export type Project = {
   description: string;
   manualProgressNote: string;
   manualProgressOverride: number | null;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,9 +37,27 @@ export function createProject(
     description: input.description?.trim() ?? "",
     manualProgressNote: "",
     manualProgressOverride: null,
+    sortOrder: Date.parse(now),
     createdAt: now,
     updatedAt: now,
   };
+}
+
+export function sortProjects(projects: Project[]) {
+  return [...projects].sort((left, right) => {
+    const leftOrder = left.sortOrder;
+    const rightOrder = right.sortOrder;
+    if (leftOrder !== undefined && rightOrder !== undefined && leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    if (leftOrder !== undefined && rightOrder === undefined) {
+      return -1;
+    }
+    if (leftOrder === undefined && rightOrder !== undefined) {
+      return 1;
+    }
+    return right.updatedAt.localeCompare(left.updatedAt);
+  });
 }
 
 export function buildProjectSummary(project: Project, tasks: Task[]): ProjectSummary {

@@ -40,12 +40,62 @@ export type ModelListResult =
       models: string[];
       ok: true;
       status: number;
+      url: string;
     }
   | {
       error: string;
       ok: false;
       status: number;
+      url?: string;
     };
+
+function collectModelIds(payload: unknown) {
+  const modelIds = new Set<string>();
+
+  function addModelId(candidate: unknown) {
+    if (typeof candidate !== "string") {
+      return;
+    }
+    const trimmedCandidate = candidate.trim();
+    if (trimmedCandidate) {
+      modelIds.add(trimmedCandidate);
+    }
+  }
+
+  function visit(candidate: unknown) {
+    if (typeof candidate === "string") {
+      addModelId(candidate);
+      return;
+    }
+
+    if (Array.isArray(candidate)) {
+      candidate.forEach(visit);
+      return;
+    }
+
+    if (!candidate || typeof candidate !== "object") {
+      return;
+    }
+
+    const id = "id" in candidate ? candidate.id : undefined;
+    const name = "name" in candidate ? candidate.name : undefined;
+    const model = "model" in candidate ? candidate.model : undefined;
+    addModelId(id);
+    addModelId(name);
+    addModelId(model);
+  }
+
+  if (payload && typeof payload === "object") {
+    const data = "data" in payload ? payload.data : undefined;
+    const models = "models" in payload ? payload.models : undefined;
+    visit(data);
+    visit(models);
+  } else {
+    visit(payload);
+  }
+
+  return [...modelIds];
+}
 
 function getNetworkErrorMessage(error: unknown) {
   if (!(error instanceof TypeError) || error.message !== "Failed to fetch") {
@@ -65,6 +115,28 @@ export function normalizeChatCompletionsEndpoint(endpoint: string) {
   return `${trimmedEndpoint}/chat/completions`;
 }
 
+export function getCandidateChatCompletionsEndpoints(endpoint: string) {
+  const trimmedEndpoint = endpoint.trim().replace(/\/+$/, "");
+  if (!trimmedEndpoint) {
+    return [];
+  }
+
+  if (trimmedEndpoint.endsWith("/chat/completions")) {
+    return [trimmedEndpoint];
+  }
+
+  const candidates = trimmedEndpoint.endsWith("/v1")
+    ? [`${trimmedEndpoint}/chat/completions`]
+    : [
+        normalizeChatCompletionsEndpoint(trimmedEndpoint),
+        `${trimmedEndpoint}/v1/chat/completions`,
+      ];
+
+  return candidates.filter(
+    (candidate, index, allCandidates) => allCandidates.indexOf(candidate) === index,
+  );
+}
+
 export function normalizeModelsEndpoint(endpoint: string) {
   const trimmedEndpoint = endpoint.trim().replace(/\/+$/, "");
 
@@ -77,6 +149,29 @@ export function normalizeModelsEndpoint(endpoint: string) {
   }
 
   return `${trimmedEndpoint}/models`;
+}
+
+export function getCandidateModelsEndpoints(endpoint: string, modelsEndpoint?: string) {
+  const trimmedModelsEndpoint = modelsEndpoint?.trim().replace(/\/+$/, "");
+  if (trimmedModelsEndpoint) {
+    return [trimmedModelsEndpoint];
+  }
+
+  const trimmedEndpoint = endpoint.trim().replace(/\/+$/, "");
+  if (!trimmedEndpoint) {
+    return [];
+  }
+
+  const candidates = trimmedEndpoint.endsWith("/v1")
+    ? [`${trimmedEndpoint}/models`]
+    : [
+        `${trimmedEndpoint}/v1/models`,
+        normalizeModelsEndpoint(trimmedEndpoint),
+      ];
+
+  return candidates.filter(
+    (candidate, index, allCandidates) => allCandidates.indexOf(candidate) === index,
+  );
 }
 
 export function parseExtraBodyJson(extraBodyJson?: string) {
@@ -141,6 +236,79 @@ async function fetchJsonThroughProxy(path: "/api/ai/chat-completions" | "/api/ai
   });
 }
 
+async function fetchChatCompletion(options: ChatCompletionOptions, chatEndpoint?: string) {
+  if (import.meta.env.DEV) {
+    return fetchJsonThroughProxy("/api/ai/chat-completions", {
+      ...buildProxyPayload(options),
+      chatEndpoint,
+    });
+  }
+
+  return fetch(chatEndpoint ?? normalizeChatCompletionsEndpoint(options.endpoint), {
+    body: JSON.stringify(buildChatCompletionRequest(options)),
+    headers: {
+      ...(options.apiKey?.trim() ? { Authorization: `Bearer ${options.apiKey.trim()}` } : {}),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+}
+
+async function readJsonPayload(response: Response) {
+  if (typeof response.text !== "function" && typeof response.json === "function") {
+    return (await response.json()) as unknown;
+  }
+
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    const contentType = response.headers.get("Content-Type") || "unknown content-type";
+    const preview = text.replace(/\s+/g, " ").trim().slice(0, 160);
+    throw new Error(
+      `AI 服务返回的不是 JSON（${response.status} ${contentType}）。请检查服务地址是否指向 OpenAI 兼容接口；返回内容预览：${preview}`,
+    );
+  }
+}
+
+function getResponseErrorMessage(payload: unknown, response: Response) {
+  if (payload && typeof payload === "object" && "error" in payload) {
+    const error = payload.error;
+    if (typeof error === "string") {
+      return error;
+    }
+    if (error && typeof error === "object" && "message" in error) {
+      const message = error.message;
+      if (typeof message === "string") {
+        return message;
+      }
+    }
+  }
+
+  return JSON.stringify(payload ?? { error: response.statusText }, null, 2);
+}
+
+async function fetchModels(options: { apiKey?: string; endpoint: string; url: string }) {
+  if (import.meta.env.DEV) {
+    return fetchJsonThroughProxy("/api/ai/models", {
+      apiKey: options.apiKey,
+      endpoint: options.endpoint,
+      modelsEndpoint: options.url,
+    });
+  }
+
+  return fetch(options.url, {
+    headers: {
+      ...(options.apiKey?.trim() ? { Authorization: `Bearer ${options.apiKey.trim()}` } : {}),
+    },
+    method: "GET",
+  });
+}
+
 export function parseChatCompletionContent(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return "";
@@ -187,23 +355,34 @@ export function parseChatCompletionContent(payload: unknown) {
 }
 
 export async function requestChatCompletion(options: ChatCompletionOptions) {
-  const response = await fetchJsonThroughProxy(
-    "/api/ai/chat-completions",
-    buildProxyPayload(options),
-  );
+  const chatEndpoints = getCandidateChatCompletionsEndpoints(options.endpoint);
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    throw new Error(`AI request failed (${response.status})`);
+  for (const chatEndpoint of chatEndpoints) {
+    try {
+      const response = await fetchChatCompletion(options, chatEndpoint);
+      const payload = await readJsonPayload(response);
+
+      if (!response.ok) {
+        throw new Error(`AI request failed (${response.status}): ${getResponseErrorMessage(payload, response)}`);
+      }
+
+      const content = parseChatCompletionContent(payload);
+
+      if (!content) {
+        throw new Error("AI response did not include content");
+      }
+
+      return content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("AI request failed.");
+      if (!lastError.message.includes("AI 服务返回的不是 JSON")) {
+        break;
+      }
+    }
   }
 
-  const payload = (await response.json()) as unknown;
-  const content = parseChatCompletionContent(payload);
-
-  if (!content) {
-    throw new Error("AI response did not include content");
-  }
-
-  return content;
+  throw lastError ?? new Error("AI endpoint is required.");
 }
 
 export async function testChatCompletion(options: {
@@ -215,24 +394,27 @@ export async function testChatCompletion(options: {
   const startedAt = performance.now();
 
   try {
-    const response = await fetchJsonThroughProxy("/api/ai/chat-completions", {
+    const response = await fetchChatCompletion({
       apiKey: options.apiKey,
-      body: buildChatCompletionRequest({
-        extraBodyJson: options.extraBodyJson,
-        messages: [{ content: "请只回复 OK", role: "user" }],
-        model: options.model,
-        temperature: 0,
-      }),
       endpoint: options.endpoint,
+      extraBodyJson: options.extraBodyJson,
+      messages: [{ content: "请只回复 OK", role: "user" }],
+      model: options.model,
+      temperature: 0,
     });
     const elapsedMs = Math.round(performance.now() - startedAt);
-    const payload = (await response.json().catch(() => null)) as unknown;
+    const payload = await readJsonPayload(response).catch((error) => {
+      if (error instanceof Error) {
+        return { error: error.message };
+      }
+      return null;
+    });
     const content = parseChatCompletionContent(payload);
 
     if (!response.ok) {
       return {
         elapsedMs,
-        error: JSON.stringify(payload ?? { error: response.statusText }, null, 2),
+        error: getResponseErrorMessage(payload, response),
         ok: false,
         status: response.status,
       };
@@ -257,46 +439,63 @@ export async function testChatCompletion(options: {
 export async function fetchAvailableModels(options: {
   apiKey?: string;
   endpoint: string;
+  modelsEndpoint?: string;
 }): Promise<ModelListResult> {
-  try {
-    const response = await fetchJsonThroughProxy("/api/ai/models", {
-      apiKey: options.apiKey,
-      endpoint: options.endpoint,
-    });
-    const payload = (await response.json().catch(() => null)) as unknown;
-
-    if (!response.ok) {
-      return {
-        error: JSON.stringify(payload ?? { error: response.statusText }, null, 2),
-        ok: false,
-        status: response.status,
-      };
-    }
-
-    const data = payload && typeof payload === "object" && "data" in payload
-      ? payload.data
-      : undefined;
-    const models = Array.isArray(data)
-      ? data
-          .map((item) => {
-            if (!item || typeof item !== "object" || !("id" in item)) {
-              return "";
-            }
-            return typeof item.id === "string" ? item.id.trim() : "";
-          })
-          .filter(Boolean)
-      : [];
-
+  const urls = getCandidateModelsEndpoints(options.endpoint, options.modelsEndpoint);
+  if (urls.length === 0) {
     return {
-      models: models.filter((model, index, allModels) => allModels.indexOf(model) === index),
-      ok: true,
-      status: response.status,
-    };
-  } catch (error) {
-    return {
-      error: getNetworkErrorMessage(error),
+      error: "请先填写服务地址或模型列表地址。",
       ok: false,
       status: 0,
     };
   }
+
+  let lastError: ModelListResult | null = null;
+
+  for (const url of urls) {
+  try {
+    const response = await fetchModels({
+      apiKey: options.apiKey,
+      endpoint: options.endpoint,
+      url,
+    });
+    const payload = await readJsonPayload(response).catch((error) => {
+      if (error instanceof Error) {
+        return { error: error.message };
+      }
+      return null;
+    });
+
+    if (!response.ok) {
+      lastError = {
+        error: getResponseErrorMessage(payload, response),
+        ok: false,
+        status: response.status,
+        url,
+      };
+      continue;
+    }
+
+    const models = collectModelIds(payload);
+    return {
+      models,
+      ok: true,
+      status: response.status,
+      url,
+    };
+  } catch (error) {
+    lastError = {
+      error: getNetworkErrorMessage(error),
+      ok: false,
+      status: 0,
+      url,
+    };
+  }
+  }
+
+  return lastError ?? {
+    error: "没有可用的模型列表地址。",
+    ok: false,
+    status: 0,
+  };
 }

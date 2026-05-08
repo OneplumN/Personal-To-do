@@ -36,7 +36,7 @@ describe("Task detail", () => {
     );
 
     expect(screen.getByRole("dialog", { name: "任务详情" })).toBeInTheDocument();
-    expect(screen.getByText("Tasklist")).toBeInTheDocument();
+    expect(screen.getByText("清单")).toBeInTheDocument();
     expect(screen.getByText("Project Gamma")).toBeInTheDocument();
     expect(screen.getByDisplayValue("编写日报素材")).toBeInTheDocument();
     expect(screen.getByLabelText("标题")).toHaveAttribute("title", "编辑任务标题");

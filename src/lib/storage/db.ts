@@ -6,7 +6,7 @@ import type { SavedReport } from "../../types/report";
 import type { Task } from "../../types/task";
 import { APP_DB_NAME, APP_DB_VERSION } from "../constants";
 
-type AppSchema = DBSchema & {
+export type AppSchema = DBSchema & {
   focusRefs: {
     key: string;
     value: FocusReference;

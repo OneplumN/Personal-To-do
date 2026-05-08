@@ -42,6 +42,37 @@ describe("storage repositories", () => {
     ]);
   });
 
+  test("replaces all focus references without leaving stale records", async () => {
+    await focusRepository.replaceAll([
+      {
+        addedAt: "2026-04-23T00:00:00.000Z",
+        order: 0,
+        taskId: "task-1",
+      },
+      {
+        addedAt: "2026-04-23T00:01:00.000Z",
+        order: 1,
+        taskId: "task-2",
+      },
+    ]);
+
+    await focusRepository.replaceAll([
+      {
+        addedAt: "2026-04-23T00:02:00.000Z",
+        order: 0,
+        taskId: "task-3",
+      },
+    ]);
+
+    expect(await focusRepository.list()).toEqual([
+      {
+        addedAt: "2026-04-23T00:02:00.000Z",
+        order: 0,
+        taskId: "task-3",
+      },
+    ]);
+  });
+
   test("saves editable reports and preferences", async () => {
     const report = {
       createdAt: "2026-04-23T00:00:00.000Z",

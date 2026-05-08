@@ -39,7 +39,7 @@ describe("App shell", () => {
     renderWithRouter(<App />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Personal To-do" }),
+      screen.getByRole("heading", { level: 1, name: "一步" }),
     ).toBeInTheDocument();
     expect(screen.getByText(todayLabel)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe("App shell", () => {
     expect(
       screen.getByRole("link", { name: "Reports" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "设置" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
     expect(
       await screen.findByRole("heading", { level: 2, name: "今日焦点" }),
     ).toBeInTheDocument();

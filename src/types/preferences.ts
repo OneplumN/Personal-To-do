@@ -12,13 +12,20 @@ export type AiRolePreset = {
   prompt: string;
 };
 
-export type AiProviderPreset = "bigmodel" | "custom" | "deepseek" | "kimi";
+export type AiProviderPreset =
+  | "bigmodel"
+  | "custom"
+  | "deepseek"
+  | "kimi"
+  | "minimax"
+  | "qwen";
 
 export type AiProfile = {
   id: string;
   name: string;
   preset: AiProviderPreset;
   endpoint: string;
+  modelsEndpoint: string;
   model: string;
   models: string[];
   apiKey: string;

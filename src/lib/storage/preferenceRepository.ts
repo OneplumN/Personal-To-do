@@ -1,4 +1,4 @@
-import { getDatabase } from "./db";
+import { getStorageAdapter } from "./getStorageAdapter";
 import {
   AI_PROVIDER_PRESETS,
   DEFAULT_AI_PROFILES,
@@ -22,6 +22,10 @@ function normalizeAiProfile(profile: Partial<AiProfile>): AiProfile | null {
     typeof profile.preset === "string" && profile.preset in AI_PROVIDER_PRESETS
       ? profile.preset
       : "custom";
+  const name =
+    profile.id === DEFAULT_AI_PROFILES[0].id && profile.name === "API 1"
+      ? DEFAULT_AI_PROFILES[0].name
+      : profile.name;
 
   return {
     apiKey: profile.apiKey,
@@ -31,7 +35,9 @@ function normalizeAiProfile(profile: Partial<AiProfile>): AiProfile | null {
     id: profile.id,
     model: typeof profile.model === "string" ? profile.model : "",
     models: normalizeAiModels(profile.models, profile.model),
-    name: profile.name,
+    modelsEndpoint:
+      typeof profile.modelsEndpoint === "string" ? profile.modelsEndpoint : "",
+    name,
     preset,
   };
 }
@@ -137,14 +143,11 @@ function normalizePreferences(preferences?: Partial<Preferences>): Preferences {
 
 export const preferenceRepository = {
   async load() {
-    const db = await getDatabase();
-    return normalizePreferences(await db.get("preferences", DEFAULT_PREFERENCES.id));
+    return normalizePreferences(await getStorageAdapter().preferences.load());
   },
 
   async save(preferences: Preferences) {
-    const db = await getDatabase();
     const normalizedPreferences = normalizePreferences(preferences);
-    await db.put("preferences", normalizedPreferences);
-    return normalizedPreferences;
+    return getStorageAdapter().preferences.save(normalizedPreferences);
   },
 };

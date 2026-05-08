@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   buildRequestPreview,
   fetchAvailableModels,
+  requestChatCompletion,
+  getCandidateModelsEndpoints,
   normalizeModelsEndpoint,
   testChatCompletion,
 } from "../lib/ai/llmClient";
@@ -76,12 +78,14 @@ describe("llmClient", () => {
     const result = await fetchAvailableModels({
       apiKey: "secret-key",
       endpoint: "https://api.deepseek.com",
+      modelsEndpoint: "https://api.deepseek.com/models",
     });
 
     expect(result).toEqual({
       models: ["deepseek-chat", "deepseek-reasoner"],
       ok: true,
       status: 200,
+      url: "https://api.deepseek.com/models",
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/ai/models",
@@ -94,6 +98,125 @@ describe("llmClient", () => {
     expect(proxyPayload).toEqual({
       apiKey: "secret-key",
       endpoint: "https://api.deepseek.com",
+      modelsEndpoint: "https://api.deepseek.com/models",
+    });
+  });
+
+  test("tries v1 models for root custom endpoints before the plain models path", async () => {
+    expect(getCandidateModelsEndpoints("https://code.heihuzi.ai/")).toEqual([
+      "https://code.heihuzi.ai/v1/models",
+      "https://code.heihuzi.ai/models",
+    ]);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({ data: [{ id: "gpt-5.5" }] }),
+        ok: true,
+        status: 200,
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAvailableModels({
+      apiKey: "secret-key",
+      endpoint: "https://code.heihuzi.ai/",
+    });
+
+    expect(result).toEqual({
+      models: ["gpt-5.5"],
+      ok: true,
+      status: 200,
+      url: "https://code.heihuzi.ai/v1/models",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("uses an explicit models endpoint without probing candidates", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ data: [{ id: "custom-model" }] }),
+      ok: true,
+      status: 200,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAvailableModels({
+      apiKey: "secret-key",
+      endpoint: "https://code.heihuzi.ai",
+      modelsEndpoint: "https://code.heihuzi.ai/openai/v1/models",
+    });
+
+    expect(result).toEqual({
+      models: ["custom-model"],
+      ok: true,
+      status: 200,
+      url: "https://code.heihuzi.ai/openai/v1/models",
+    });
+    const [, requestInit] = fetchMock.mock.calls[0];
+    const proxyPayload = JSON.parse(String(requestInit.body));
+    expect(proxyPayload.modelsEndpoint).toBe(
+      "https://code.heihuzi.ai/openai/v1/models",
+    );
+  });
+
+  test("retries v1 chat completions when a root endpoint returns html", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        headers: new Headers({ "Content-Type": "text/html" }),
+        ok: true,
+        status: 200,
+        text: async () => "<!doctype html><html>not the api</html>",
+      })
+      .mockResolvedValueOnce({
+        headers: new Headers({ "Content-Type": "application/json" }),
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            choices: [{ message: { content: "polished report" } }],
+          }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestChatCompletion({
+      apiKey: "secret-key",
+      endpoint: "https://code.heihuzi.ai",
+      messages: [{ content: "报告", role: "user" }],
+      model: "gpt-5.5",
+    });
+
+    expect(result).toBe("polished report");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, firstRequestInit] = fetchMock.mock.calls[0];
+    const [, secondRequestInit] = fetchMock.mock.calls[1];
+    expect(JSON.parse(String(firstRequestInit.body)).chatEndpoint).toBe(
+      "https://code.heihuzi.ai/chat/completions",
+    );
+    expect(JSON.parse(String(secondRequestInit.body)).chatEndpoint).toBe(
+      "https://code.heihuzi.ai/v1/chat/completions",
+    );
+  });
+
+  test("fetches model ids from common custom provider response shapes", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({
+        models: ["gpt-5.5", { name: "gpt-5.4" }, { model: "custom-chat" }],
+      }),
+      ok: true,
+      status: 200,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAvailableModels({
+      apiKey: "secret-key",
+      endpoint: "https://custom.example.com/v1",
+    });
+
+    expect(result).toEqual({
+      models: ["gpt-5.5", "gpt-5.4", "custom-chat"],
+      ok: true,
+      status: 200,
+      url: "https://custom.example.com/v1/models",
     });
   });
 });

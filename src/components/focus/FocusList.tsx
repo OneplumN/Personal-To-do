@@ -6,6 +6,7 @@ import {
 } from "../../lib/constants";
 import type { Project } from "../../types/project";
 import type { Task, TaskPriority } from "../../types/task";
+import { getReorderedIds, useSortableCards, type DropPosition } from "../../lib/interaction/useSortableCards";
 
 export type FocusListItem = {
   project: Project;
@@ -123,7 +124,11 @@ function FocusPriorityControl({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="focus-priority" data-focus-control="true">
+    <div
+      className="focus-priority"
+      data-focus-control="true"
+      data-no-drag="true"
+    >
       <button
         aria-expanded={open}
         aria-label={`修改优先级：${TASK_PRIORITY_LABELS[priority]}`}
@@ -161,24 +166,27 @@ function FocusPriorityControl({
 }
 
 function FocusCard({
+  dragMode,
+  dropPosition,
   index,
   item,
+  onBeginDrag,
   onChangePriority,
   onOpenTask,
   onRemoveTask,
-  onReorder,
   onUpdateStatus,
 }: {
+  dragMode: "dragging" | "idle" | "target";
+  dropPosition: DropPosition;
   index: number;
   item: FocusListItem;
+  onBeginDrag: (event: React.PointerEvent<HTMLElement>, taskId: string) => void;
   onChangePriority: (taskId: string, priority: TaskPriority) => void;
   onOpenTask: (taskId: string) => void;
   onRemoveTask: (taskId: string) => void;
-  onReorder: (taskId: string, toIndex: number) => void;
   onUpdateStatus: (taskId: string, status: "done") => void;
 }) {
   const { task } = item;
-  const [dragState, setDragState] = useState<"idle" | "dragging" | "target">("idle");
   const glassTone = getGlassTone(task.id);
   const pendingTasklist = task.checklist.filter((checklistItem) => !checklistItem.done);
   const tasklistPreview = pendingTasklist.slice(0, 3);
@@ -195,13 +203,13 @@ function FocusCard({
   return (
     <article
       className={
-        dragState === "dragging"
+        dragMode === "dragging"
           ? "focus-card focus-card--dragging"
-          : dragState === "target"
-            ? "focus-card focus-card--target"
+        : dragMode === "target"
+            ? `focus-card focus-card--target focus-card--drop-${dropPosition}`
             : "focus-card"
       }
-      draggable
+      data-sortable-id={task.id}
       style={
         {
           "--focus-card-border": glassTone.border,
@@ -209,24 +217,7 @@ function FocusCard({
           "--focus-card-surface": glassTone.surface,
         } as CSSProperties
       }
-      onDragEnd={() => setDragState("idle")}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragState((current) => (current === "dragging" ? current : "target"));
-      }}
-      onDragStart={(event) => {
-        event.dataTransfer.setData("text/plain", task.id);
-        event.dataTransfer.effectAllowed = "move";
-        setDragState("dragging");
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        const draggedTaskId = event.dataTransfer.getData("text/plain");
-        if (draggedTaskId) {
-          onReorder(draggedTaskId, index);
-        }
-        setDragState("idle");
-      }}
+      onPointerDown={(event) => onBeginDrag(event, task.id)}
     >
       <div className="focus-card__top">
         <div className="focus-card__title" role="group" aria-label={`焦点任务：${task.title}`}>
@@ -236,7 +227,6 @@ function FocusCard({
               priority={task.priority}
               taskId={task.id}
             />
-            <span className="focus-card__separator">·</span>
             <span className="focus-card__title-static">
               <span className="focus-card__title-text">{task.title}</span>
             </span>
@@ -245,6 +235,7 @@ function FocusCard({
         <button
           aria-label="移出"
           className="icon-button focus-card__remove"
+          data-no-drag="true"
           data-tooltip="移出"
           onClick={() => onRemoveTask(task.id)}
           title="移出"
@@ -258,7 +249,7 @@ function FocusCard({
 
       {task.checklist.length > 0 ? (
         <div className="focus-card__tasklist">
-          <p className="eyebrow">Tasklist</p>
+          <p className="eyebrow">清单</p>
           {tasklistPreview.length > 0 ? (
             <>
               <ol className="focus-card__tasklist-items">
@@ -277,7 +268,7 @@ function FocusCard({
             </>
           ) : (
             <div className="focus-card__tasklist-empty">
-              <strong>Tasklist 已完成</strong>
+              <strong>清单已完成</strong>
             </div>
           )}
         </div>
@@ -298,6 +289,7 @@ function FocusCard({
             aria-label="编辑"
             className="icon-button focus-card__action focus-card__action--edit"
             data-tooltip="编辑"
+            data-no-drag="true"
             onClick={() => onOpenTask(task.id)}
             title="编辑"
             type="button"
@@ -311,6 +303,7 @@ function FocusCard({
               aria-label="完成"
               className="icon-button focus-card__action focus-card__action--complete"
               data-tooltip="完成"
+              data-no-drag="true"
               onClick={() => onUpdateStatus(task.id, "done")}
               title="完成"
               type="button"
@@ -341,6 +334,19 @@ export function FocusList({
   onReorder: (taskId: string, toIndex: number) => void;
   onUpdateStatus: (taskId: string, status: "done") => void;
 }) {
+  const { beginDrag, dragState } = useSortableCards({
+    onReorder: (draggedId, targetId, position) => {
+      const orderedIds = getReorderedIds(
+        items.map((item) => item.task.id),
+        draggedId,
+        targetId,
+        position,
+      );
+      onReorder(draggedId, orderedIds.indexOf(draggedId));
+    },
+    selector: ".focus-card[data-sortable-id]",
+  });
+
   if (items.length === 0) {
     return (
       <div className="empty-state">
@@ -353,13 +359,21 @@ export function FocusList({
     <div className="focus-list focus-list--cards">
       {items.map((item, index) => (
         <FocusCard
+          dragMode={
+            dragState.draggedId === item.task.id
+              ? "dragging"
+              : dragState.overId === item.task.id
+                ? "target"
+                : "idle"
+          }
+          dropPosition={dragState.dropPosition}
           index={index}
           item={item}
           key={item.task.id}
+          onBeginDrag={beginDrag}
           onChangePriority={onChangePriority}
           onOpenTask={onOpenTask}
           onRemoveTask={onRemoveTask}
-          onReorder={onReorder}
           onUpdateStatus={onUpdateStatus}
         />
       ))}

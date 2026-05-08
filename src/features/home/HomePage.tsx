@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFocusStore } from "../focus/focusStore";
 import { useProjectStore } from "../projects/projectStore";
@@ -8,26 +8,8 @@ import { ProjectCard } from "../../components/projects/ProjectCard";
 import { Modal } from "../../components/common/Modal";
 import { TaskDetailPanel } from "../../components/tasks/TaskDetailPanel";
 import { useToast } from "../../components/common/ToastProvider";
+import { getReorderedIds, useSortableCards } from "../../lib/interaction/useSortableCards";
 import type { TaskPriority, TaskStatus } from "../../types/task";
-
-function ProjectCreateCancelIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path
-        d="m7 7 10 10"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2.4"
-      />
-      <path
-        d="m17 7-10 10"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2.4"
-      />
-    </svg>
-  );
-}
 
 function ProjectCreateConfirmIcon() {
   return (
@@ -47,6 +29,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const projects = useProjectStore((state) => state.projects);
   const createProject = useProjectStore((state) => state.createProject);
+  const reorderProject = useProjectStore((state) => state.reorderProject);
   const updateProject = useProjectStore((state) => state.updateProject);
   const tasks = useTaskStore((state) => state.tasks);
   const loadTasks = useTaskStore((state) => state.loadTasks);
@@ -72,7 +55,7 @@ export function HomePage() {
       focusRefs
         .map((ref) => {
           const task = tasks.find((item) => item.id === ref.taskId);
-          if (!task) {
+          if (!task || task.status === "done") {
             return null;
           }
           const project = projects.find((item) => item.id === task.projectId);
@@ -148,8 +131,8 @@ export function HomePage() {
 
   function handleQuickStatus(taskId: string, status: TaskStatus) {
     if (status === "done") {
-      void setTaskStatus(taskId, "done").then(() => {
-        void removeFocusTask(taskId);
+      void setTaskStatus(taskId, "done").then(async () => {
+        await removeFocusTask(taskId);
         showToast({
           action: {
             label: "撤回",
@@ -170,6 +153,30 @@ export function HomePage() {
   function handlePriorityChange(taskId: string, priority: TaskPriority) {
     void setTaskPriority(taskId, priority);
   }
+
+  const { beginDrag: beginProjectDrag, dragState: projectDragState } = useSortableCards({
+    onReorder: (draggedId, targetId, position) => {
+      const orderedIds = getReorderedIds(
+        projects.map((project) => project.id),
+        draggedId,
+        targetId,
+        position,
+      );
+      void reorderProject(draggedId, orderedIds.indexOf(draggedId));
+    },
+    selector: ".project-card[data-sortable-id]",
+  });
+
+  useEffect(() => {
+    function handleOpenProjectCreate() {
+      setIsCreatingProject(true);
+    }
+
+    window.addEventListener("personal-todo:new-primary", handleOpenProjectCreate);
+    return () => {
+      window.removeEventListener("personal-todo:new-primary", handleOpenProjectCreate);
+    };
+  }, []);
 
   return (
     <div className="dashboard-page dashboard-page--home">
@@ -222,7 +229,16 @@ export function HomePage() {
         <div className="project-grid">
           {projects.map((project) => (
             <ProjectCard
+              dragMode={
+                projectDragState.draggedId === project.id
+                  ? "dragging"
+                  : projectDragState.overId === project.id
+                    ? "target"
+                    : "idle"
+              }
+              dropPosition={projectDragState.dropPosition}
               key={project.id}
+              onBeginDrag={beginProjectDrag}
               onEdit={openProjectEditor}
               onOpen={(projectId) => navigate(`/projects?project=${projectId}`)}
               project={project}
@@ -258,15 +274,6 @@ export function HomePage() {
               />
             </label>
             <div className="modal__actions project-create-modal__actions">
-              <button
-                aria-label="取消新建项目"
-                className="icon-button icon-action icon-action--danger"
-                onClick={() => setIsCreatingProject(false)}
-                title="取消"
-                type="button"
-              >
-                <ProjectCreateCancelIcon />
-              </button>
               <button
                 aria-label="创建项目"
                 className="icon-button icon-action icon-action--success"
@@ -305,15 +312,6 @@ export function HomePage() {
               />
             </label>
             <div className="modal__actions project-create-modal__actions">
-              <button
-                aria-label="取消编辑项目"
-                className="icon-button icon-action icon-action--danger"
-                onClick={() => setEditingProjectId(null)}
-                title="取消"
-                type="button"
-              >
-                <ProjectCreateCancelIcon />
-              </button>
               <button
                 aria-label="保存项目"
                 className="icon-button icon-action icon-action--success"
