@@ -103,7 +103,7 @@ describe("Home dashboard", () => {
     const user = userEvent.setup();
     const { container } = renderWithRouter(<App />);
 
-    await screen.findByRole("heading", { level: 2, name: "今日焦点" });
+    await screen.findByRole("heading", { level: 2, name: "Today" });
     const focusCard = screen.getByRole("group", { name: `焦点任务：${longTitle}` }).closest(".focus-card");
     expect(focusCard).not.toBeNull();
     const focusWithin = within(focusCard as HTMLElement);
@@ -237,7 +237,7 @@ describe("Home dashboard", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await screen.findByRole("heading", { level: 2, name: "项目总览" });
+    await screen.findByRole("heading", { level: 2, name: "Projects" });
     await user.click(screen.getByRole("button", { name: "编辑" }));
     expect(await screen.findByRole("dialog", { name: "编辑项目" })).toBeInTheDocument();
 
@@ -265,7 +265,7 @@ describe("Home dashboard", () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);
 
-    await screen.findByRole("heading", { level: 2, name: "项目总览" });
+    await screen.findByRole("heading", { level: 2, name: "Projects" });
     await user.click(screen.getByRole("button", { name: "新建项目" }));
     expect(screen.getByRole("dialog", { name: "新建项目" })).toBeInTheDocument();
 
@@ -294,7 +294,7 @@ describe("Home dashboard", () => {
     await projectRepository.save(secondProject);
 
     const { container } = renderWithRouter(<App />);
-    await screen.findByRole("heading", { level: 2, name: "项目总览" });
+    await screen.findByRole("heading", { level: 2, name: "Projects" });
 
     const projectCards = () => Array.from(container.querySelectorAll<HTMLElement>(".project-card"));
     const firstCard = projectCards().find((card) => card.textContent?.includes("Project First"));

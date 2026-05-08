@@ -183,7 +183,7 @@ export function HomePage() {
       <section className="dashboard-section dashboard-section--focus">
         <div className="section-heading">
           <div>
-            <h2>今日焦点</h2>
+            <h2>Today</h2>
           </div>
         </div>
         <FocusList
@@ -213,7 +213,7 @@ export function HomePage() {
       <section className="dashboard-section dashboard-section--projects">
         <div className="section-heading">
           <div>
-            <h2>项目总览</h2>
+            <h2>Projects</h2>
           </div>
           <button
             aria-label="新建项目"

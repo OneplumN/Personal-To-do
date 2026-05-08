@@ -1,6 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
 import { DEFAULT_PREFERENCES } from "../constants";
-import { demoSnapshot } from "../demo/demoSnapshot";
 import {
   sortByCreatedAtDesc,
   sortByUpdatedAtDesc,
@@ -21,8 +20,6 @@ type JsonRow = {
 };
 
 let databasePromise: Promise<Database> | null = null;
-let seedPromise: Promise<void> | null = null;
-let isSeeding = false;
 
 function getSqliteDatabase() {
   databasePromise ??= Database.load(SQLITE_URL);
@@ -84,29 +81,6 @@ async function insertRows(
   }
 }
 
-async function insertProjects(projects: Project[]) {
-  await insertRows(
-    "projects",
-    ["id", "updated_at", "payload_json"],
-    projects.map((project) => [project.id, project.updatedAt, serializePayload(project)]),
-  );
-}
-
-async function insertTasks(tasks: Task[]) {
-  await insertRows(
-    "tasks",
-    ["id", "project_id", "status", "updated_at", "completed_at", "payload_json"],
-    tasks.map((task) => [
-      task.id,
-      task.projectId,
-      task.status,
-      task.updatedAt,
-      getCompletedAt(task),
-      serializePayload(task),
-    ]),
-  );
-}
-
 async function insertFocusRefs(references: FocusReference[]) {
   await insertRows(
     "focus_refs",
@@ -120,19 +94,6 @@ async function insertFocusRefs(references: FocusReference[]) {
   );
 }
 
-async function insertReports(reports: SavedReport[]) {
-  await insertRows(
-    "reports",
-    ["id", "type", "created_at", "payload_json"],
-    reports.map((report) => [
-      report.id,
-      report.type,
-      report.createdAt,
-      serializePayload(report),
-    ]),
-  );
-}
-
 async function clearAll() {
   const db = await getSqliteDatabase();
   await db.execute("DELETE FROM focus_refs");
@@ -142,41 +103,14 @@ async function clearAll() {
   await db.execute("DELETE FROM preferences");
 }
 
-async function seedDemoSnapshotIfEmpty() {
-  const db = await getSqliteDatabase();
-  const rows = await db.select<Array<{ total: number }>>(
-    "SELECT ((SELECT COUNT(*) FROM projects) + (SELECT COUNT(*) FROM tasks) + (SELECT COUNT(*) FROM reports)) AS total",
-  );
-  const hasData = Number(rows[0]?.total ?? 0) > 0;
-  if (hasData) {
-    return;
-  }
-
-  await clearAll();
-  isSeeding = true;
-  try {
-    await insertProjects(demoSnapshot.projects);
-    await insertTasks(demoSnapshot.tasks);
-    await insertFocusRefs(demoSnapshot.focusRefs);
-    await insertReports(demoSnapshot.reports);
-    await sqliteStorageAdapter.preferences.save(demoSnapshot.preferences);
-  } finally {
-    isSeeding = false;
-  }
-}
-
-async function ensureSeeded() {
-  if (isSeeding) {
-    return;
-  }
-  seedPromise ??= seedDemoSnapshotIfEmpty();
-  await seedPromise;
+async function ensureReady() {
+  await getSqliteDatabase();
 }
 
 export const sqliteStorageAdapter: StorageAdapter = {
   focusRefs: {
     async add(reference) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute(
         "INSERT OR REPLACE INTO focus_refs (task_id, added_at, order_value, payload_json) VALUES ($1, $2, $3, $4)",
@@ -185,12 +119,12 @@ export const sqliteStorageAdapter: StorageAdapter = {
       return reference;
     },
     async clear() {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute("DELETE FROM focus_refs");
     },
     async list() {
-      await ensureSeeded();
+      await ensureReady();
       return sortFocusRefs(
         await selectPayloads<FocusReference>(
           "SELECT payload_json FROM focus_refs ORDER BY COALESCE(order_value, 2147483647), added_at ASC",
@@ -198,12 +132,12 @@ export const sqliteStorageAdapter: StorageAdapter = {
       );
     },
     async remove(taskId) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute("DELETE FROM focus_refs WHERE task_id = $1", [taskId]);
     },
     async replaceAll(references) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute("DELETE FROM focus_refs");
       await insertFocusRefs(references);
@@ -212,13 +146,13 @@ export const sqliteStorageAdapter: StorageAdapter = {
   },
   preferences: {
     async load() {
-      await ensureSeeded();
+      await ensureReady();
       return selectPayload<Preferences>("SELECT payload_json FROM preferences WHERE id = $1", [
         DEFAULT_PREFERENCES.id,
       ]);
     },
     async save(preferences) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute(
         "INSERT OR REPLACE INTO preferences (id, updated_at, payload_json) VALUES ($1, $2, $3)",
@@ -229,22 +163,22 @@ export const sqliteStorageAdapter: StorageAdapter = {
   },
   projects: {
     async delete(projectId) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute("DELETE FROM projects WHERE id = $1", [projectId]);
     },
     async get(projectId) {
-      await ensureSeeded();
+      await ensureReady();
       return selectPayload<Project>("SELECT payload_json FROM projects WHERE id = $1", [projectId]);
     },
     async list() {
-      await ensureSeeded();
+      await ensureReady();
       return sortProjects(
         await selectPayloads<Project>("SELECT payload_json FROM projects ORDER BY updated_at DESC"),
       );
     },
     async save(project) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute(
         "INSERT OR REPLACE INTO projects (id, updated_at, payload_json) VALUES ($1, $2, $3)",
@@ -255,18 +189,18 @@ export const sqliteStorageAdapter: StorageAdapter = {
   },
   reports: {
     async delete(reportId) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute("DELETE FROM reports WHERE id = $1", [reportId]);
     },
     async get(reportId) {
-      await ensureSeeded();
+      await ensureReady();
       return selectPayload<SavedReport>("SELECT payload_json FROM reports WHERE id = $1", [
         reportId,
       ]);
     },
     async list() {
-      await ensureSeeded();
+      await ensureReady();
       return sortByCreatedAtDesc(
         await selectPayloads<SavedReport>(
           "SELECT payload_json FROM reports ORDER BY created_at DESC",
@@ -274,7 +208,7 @@ export const sqliteStorageAdapter: StorageAdapter = {
       );
     },
     async save(report) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute(
         "INSERT OR REPLACE INTO reports (id, type, created_at, payload_json) VALUES ($1, $2, $3, $4)",
@@ -285,31 +219,30 @@ export const sqliteStorageAdapter: StorageAdapter = {
   },
   async reset() {
     await clearAll();
-    seedPromise = Promise.resolve();
   },
   tasks: {
     async delete(taskId) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute("DELETE FROM tasks WHERE id = $1", [taskId]);
     },
     async get(taskId) {
-      await ensureSeeded();
+      await ensureReady();
       return selectPayload<Task>("SELECT payload_json FROM tasks WHERE id = $1", [taskId]);
     },
     async listAll() {
-      await ensureSeeded();
+      await ensureReady();
       return sortByUpdatedAtDesc(
         await selectPayloads<Task>("SELECT payload_json FROM tasks ORDER BY updated_at DESC"),
       );
     },
     async listByIds(taskIds) {
-      await ensureSeeded();
+      await ensureReady();
       const records = await Promise.all(taskIds.map((taskId) => this.get(taskId)));
       return records.filter((task): task is Task => Boolean(task));
     },
     async listByProject(projectId) {
-      await ensureSeeded();
+      await ensureReady();
       return sortByUpdatedAtDesc(
         await selectPayloads<Task>(
           "SELECT payload_json FROM tasks WHERE project_id = $1 ORDER BY updated_at DESC",
@@ -318,7 +251,7 @@ export const sqliteStorageAdapter: StorageAdapter = {
       );
     },
     async save(task) {
-      await ensureSeeded();
+      await ensureReady();
       const db = await getSqliteDatabase();
       await db.execute(
         "INSERT OR REPLACE INTO tasks (id, project_id, status, updated_at, completed_at, payload_json) VALUES ($1, $2, $3, $4, $5, $6)",

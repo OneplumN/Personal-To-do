@@ -104,7 +104,7 @@ export function App() {
         <header className="app-header">
           <div className="app-header__intro">
             <p className="app-header__date">{todayLabel}</p>
-            <h1>一步</h1>
+            <h1>Yibu</h1>
           </div>
           <div className="app-header__actions">
             <nav aria-label="Primary" className="app-nav">
@@ -165,8 +165,8 @@ export function App() {
           {!ready ? (
             <section className="placeholder-page" aria-label="Loading">
               <p className="eyebrow">Bootstrapping</p>
-              <h2>正在载入工作台</h2>
-              <p>正在准备项目、任务、今日焦点和报告数据。</p>
+              <h2>Loading workspace</h2>
+              <p>Preparing projects, tasks, today list, and reports.</p>
             </section>
           ) : (
             <Routes>
