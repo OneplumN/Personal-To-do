@@ -175,7 +175,7 @@ export function TaskDetailPanel({
   const setPriority = useTaskStore((state) => state.setPriority);
   const addChecklistItem = useTaskStore((state) => state.addChecklistItem);
   const updateChecklistItemText = useTaskStore((state) => state.updateChecklistItemText);
-  const moveChecklistItem = useTaskStore((state) => state.moveChecklistItem);
+  const moveChecklistItemToIndex = useTaskStore((state) => state.moveChecklistItemToIndex);
   const removeChecklistItem = useTaskStore((state) => state.removeChecklistItem);
   const toggleChecklistItem = useTaskStore((state) => state.toggleChecklistItem);
   const focusRefs = useFocusStore((state) => state.focusRefs);
@@ -349,8 +349,8 @@ export function TaskDetailPanel({
               onDeleteItem={async (itemId) => {
                 await removeChecklistItem(task.id, itemId);
               }}
-              onMoveItem={async (itemId, direction) => {
-                await moveChecklistItem(task.id, itemId, direction);
+              onMoveItem={async (itemId, toIndex) => {
+                await moveChecklistItemToIndex(task.id, itemId, toIndex);
               }}
               onToggleItem={async (itemId) => {
                 await toggleChecklistItem(task.id, itemId);

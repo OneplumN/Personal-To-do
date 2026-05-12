@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import { App } from "../app/App";
@@ -190,7 +190,11 @@ describe("Project workspace", () => {
 
     await user.click(screen.getByRole("button", { name: "新建任务" }));
     expect(await screen.findByRole("dialog", { name: "新建任务" })).toBeInTheDocument();
-    await user.type(screen.getByRole("textbox", { name: "任务标题" }), "补充任务入口{Enter}");
+    const titleInput = screen.getByRole("textbox", { name: "任务标题" });
+    await user.type(titleInput, "补充任务入口");
+    fireEvent.keyDown(titleInput, { code: "Enter", key: "Enter" });
+    expect(useTaskStore.getState().tasks.find((task) => task.title === "补充任务入口")).toBeUndefined();
+    await user.click(screen.getByRole("button", { name: "保存任务" }));
 
     await waitFor(() => {
       expect(

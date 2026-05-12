@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { exportSnapshot } from "../../lib/export/exportSnapshot";
-import { saveTextFile } from "../../lib/desktop/desktopFiles";
+import { openTextFile, saveTextFile } from "../../lib/desktop/desktopFiles";
+import { importSnapshot } from "../../lib/import/importSnapshot";
+import { isTauriRuntime } from "../../lib/platform/runtime";
+import { persistLocalSnapshotNow } from "../../lib/localPersistence/localSnapshotApi";
 import { useToast } from "../../components/common/ToastProvider";
+import { useFocusStore } from "../focus/focusStore";
 import { usePreferenceStore } from "../preferences/preferenceStore";
+import { useProjectStore } from "../projects/projectStore";
+import { useReportStore } from "../reports/reportStore";
+import { useTaskStore } from "../tasks/taskStore";
 import { AiProviderSettings } from "./AiProviderSettings";
 import { AiRoleSettings } from "./AiRoleSettings";
 import { SettingsExportIcon } from "./settingsIcons";
@@ -71,17 +78,37 @@ function getPreferenceDraftSnapshot(preferences: {
   });
 }
 
+function readBrowserFileText(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("error", () => {
+      reject(reader.error ?? new Error("读取备份文件失败"));
+    });
+    reader.addEventListener("load", () => {
+      resolve(typeof reader.result === "string" ? reader.result : "");
+    });
+    reader.readAsText(file);
+  });
+}
+
 export function SettingsPage() {
   const navigate = useNavigate();
   const preferences = usePreferenceStore((state) => state.preferences);
+  const loadPreferences = usePreferenceStore((state) => state.loadPreferences);
   const savePreferences = usePreferenceStore((state) => state.savePreferences);
+  const loadFocus = useFocusStore((state) => state.loadFocus);
+  const loadProjects = useProjectStore((state) => state.loadProjects);
+  const loadReports = useReportStore((state) => state.loadReports);
+  const loadTasks = useTaskStore((state) => state.loadTasks);
   const { showToast } = useToast();
 
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState(preferences);
   const [activeSettingsDomain, setActiveSettingsDomain] =
     useState<SettingsDomain>("ai");
   const [confirmingDelete, setConfirmingDelete] = useState<ConfirmingDelete | null>(null);
+  const [isConfirmingImport, setIsConfirmingImport] = useState(false);
 
   const prettyExportName = useMemo(
     () => `yibu-snapshot-${new Date().toISOString().slice(0, 10)}.json`,
@@ -178,27 +205,112 @@ export function SettingsPage() {
   }
 
   async function handleExport() {
-    const snapshot = await exportSnapshot();
-    const contents = JSON.stringify(snapshot, null, 2);
-    const savedThroughDesktop = await saveTextFile({
-      contents,
-      defaultPath: prettyExportName,
+    try {
+      const snapshot = await exportSnapshot();
+      const contents = JSON.stringify(snapshot, null, 2);
+      const desktopSaveResult = await saveTextFile({
+        contents,
+        defaultPath: prettyExportName,
+      });
+      if (desktopSaveResult === "saved") {
+        showToast({
+          message: `已导出 ${snapshot.projects.length} 个项目 / ${snapshot.tasks.length} 个任务 / ${snapshot.reports.length} 个报告`,
+        });
+        return;
+      }
+      if (desktopSaveResult === "canceled") {
+        return;
+      }
+
+      const blob = new Blob([contents], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = prettyExportName;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showToast({
+        message: `已导出 ${snapshot.projects.length} 个项目 / ${snapshot.tasks.length} 个任务 / ${snapshot.reports.length} 个报告`,
+      });
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? `导出失败：${error.message}` : "导出失败",
+      });
+    }
+  }
+
+  async function reloadAppDataAfterImport() {
+    const [projects, tasks, focusRefs, reports, nextPreferences] = await Promise.all([
+      loadProjects(),
+      loadTasks(),
+      loadFocus(),
+      loadReports(),
+      loadPreferences(),
+    ]);
+    setDraft(nextPreferences);
+    syncRoleName(nextPreferences);
+    return { focusRefs, preferences: nextPreferences, projects, reports, tasks };
+  }
+
+  async function importSnapshotFromText(contents: string) {
+    const snapshot = JSON.parse(contents) as unknown;
+    await importSnapshot(snapshot);
+    const importedData = await reloadAppDataAfterImport();
+    await persistLocalSnapshotNow();
+    setIsConfirmingImport(false);
+    showToast({
+      message: `已恢复 ${importedData.projects.length} 个项目 / ${importedData.tasks.length} 个任务 / ${importedData.reports.length} 个报告`,
     });
-    if (savedThroughDesktop) {
-      showToast({ message: "已导出" });
+    const firstProjectId = importedData.projects[0]?.id;
+    void navigate(firstProjectId ? `/projects?project=${firstProjectId}` : "/");
+  }
+
+  async function handleImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
       return;
     }
 
-    const blob = new Blob([contents], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = prettyExportName;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    showToast({ message: "已导出" });
+    try {
+      await importSnapshotFromText(await readBrowserFileText(file));
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : "导入失败",
+      });
+    }
+  }
+
+  async function handleImport() {
+    if (!isConfirmingImport) {
+      setIsConfirmingImport(true);
+      showToast({ message: "再次点击恢复数据以覆盖当前数据" });
+      return;
+    }
+
+    try {
+      if (!isTauriRuntime()) {
+        importInputRef.current?.click();
+        return;
+      }
+
+      const desktopOpenResult = await openTextFile();
+      if (desktopOpenResult.status === "opened") {
+        await importSnapshotFromText(desktopOpenResult.contents);
+        return;
+      }
+      if (desktopOpenResult.status === "canceled") {
+        return;
+      }
+
+      importInputRef.current?.click();
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : "导入失败",
+      });
+    }
   }
 
   function updateLaneColor(key: keyof typeof draft.laneColors, value: string) {
@@ -383,14 +495,31 @@ export function SettingsPage() {
                 <div className="settings-data-row">
                   <span>
                     <strong>恢复数据</strong>
-                    <small>从快照恢复会覆盖当前本地数据，后续接入文件选择。</small>
+                    <small>
+                      {isConfirmingImport
+                        ? "再次点击会选择备份文件，并覆盖当前项目、任务、报告和设置。"
+                        : "从快照恢复会覆盖当前本地数据。"}
+                    </small>
                   </span>
+                  <input
+                    aria-label="选择备份文件"
+                    accept="application/json,.json"
+                    className="visually-hidden"
+                    onChange={(event) => {
+                      void handleImportFileChange(event);
+                    }}
+                    ref={importInputRef}
+                    type="file"
+                  />
                   <button
+                    aria-label={isConfirmingImport ? "确认恢复数据" : "恢复数据"}
                     className="settings-action-card settings-action-card--button"
-                    disabled
+                    onClick={() => {
+                      void handleImport();
+                    }}
                     type="button"
                   >
-                    待接入
+                    {isConfirmingImport ? "确认恢复" : "导入"}
                   </button>
                 </div>
                 <div className="settings-data-row settings-data-row--quiet">

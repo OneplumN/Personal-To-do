@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChecklistItem, Task } from "../../types/task";
 
 function ConfirmIcon() {
@@ -38,7 +38,7 @@ export function ChecklistEditor({
 }: {
   onAddItem: (text: string) => Promise<void>;
   onDeleteItem: (itemId: string) => Promise<void>;
-  onMoveItem: (itemId: string, direction: "up" | "down") => Promise<void>;
+  onMoveItem: (itemId: string, toIndex: number) => Promise<void>;
   onToggleItem: (itemId: string) => Promise<void>;
   onUpdateItemText: (itemId: string, text: string) => Promise<void>;
   task: Task;
@@ -49,13 +49,15 @@ export function ChecklistEditor({
   const [editingText, setEditingText] = useState("");
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  const pointerDragRef = useRef<{
+    active: boolean;
+    itemId: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    targetId: string | null;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const orderIndexById = useMemo(
-    () =>
-      new Map(task.checklist.map((item, index) => [item.id, index])),
-    [task.checklist],
-  );
 
   useEffect(() => {
     if (isAdding) {
@@ -95,21 +97,65 @@ export function ChecklistEditor({
     inputRef.current?.focus();
   }
 
-  async function moveItemToPosition(fromItemId: string, toItemId: string) {
-    const fromIndex = orderIndexById.get(fromItemId);
-    const toIndex = orderIndexById.get(toItemId);
-
-    if (fromIndex === undefined || toIndex === undefined || fromIndex === toIndex) {
-      return;
-    }
-
-    const direction = fromIndex < toIndex ? "down" : "up";
-    const steps = Math.abs(fromIndex - toIndex);
-
-    for (let index = 0; index < steps; index += 1) {
-      await onMoveItem(fromItemId, direction);
-    }
+  function getChecklistRowFromPoint(clientX: number, clientY: number) {
+    return document
+      .elementFromPoint(clientX, clientY)
+      ?.closest<HTMLElement>(".checklist-row[data-checklist-item-id]") ?? null;
   }
+
+  function clearPointerDrag() {
+    pointerDragRef.current = null;
+    setDraggedItemId(null);
+    setDragOverItemId(null);
+  }
+
+  useEffect(() => {
+    function handlePointerMove(event: PointerEvent) {
+      const session = pointerDragRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      const movedX = Math.abs(event.clientX - session.startX);
+      const movedY = Math.abs(event.clientY - session.startY);
+      if (!session.active && Math.max(movedX, movedY) < 4) {
+        return;
+      }
+
+      event.preventDefault();
+      session.active = true;
+
+      const targetRow = getChecklistRowFromPoint(event.clientX, event.clientY);
+      const targetId = targetRow?.dataset.checklistItemId ?? null;
+      session.targetId = targetId;
+      setDragOverItemId(targetId && targetId !== session.itemId ? targetId : null);
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      const session = pointerDragRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      const targetId = session.targetId;
+      if (session.active && targetId && targetId !== session.itemId) {
+        const targetIndex = task.checklist.findIndex((item) => item.id === targetId);
+        if (targetIndex !== -1) {
+          void onMoveItem(session.itemId, targetIndex);
+        }
+      }
+      clearPointerDrag();
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", clearPointerDrag);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", clearPointerDrag);
+    };
+  }, [onMoveItem, task.checklist]);
 
   return (
     <section className="detail-section">
@@ -170,7 +216,7 @@ export function ChecklistEditor({
                   ? "checklist-row checklist-row--drop-target"
                   : "checklist-row"
             }
-            draggable
+            data-checklist-item-id={item.id}
             key={item.id}
             onDragEnd={() => {
               setDraggedItemId(null);
@@ -188,13 +234,39 @@ export function ChecklistEditor({
             onDrop={(event) => {
               event.preventDefault();
               if (draggedItemId && draggedItemId !== item.id) {
-                void moveItemToPosition(draggedItemId, item.id);
+                void onMoveItem(draggedItemId, index);
               }
               setDraggedItemId(null);
               setDragOverItemId(null);
             }}
           >
-            <span aria-hidden="true" className="checklist-row__drag-handle">
+            <span
+              aria-hidden="true"
+              className="checklist-row__drag-handle"
+              draggable
+              onPointerDown={(event) => {
+                if (event.button > 0) {
+                  return;
+                }
+                event.preventDefault();
+                pointerDragRef.current = {
+                  active: false,
+                  itemId: item.id,
+                  pointerId: event.pointerId,
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  targetId: null,
+                };
+                setDraggedItemId(item.id);
+              }}
+              onDragStart={(event) => {
+                if (event.dataTransfer) {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", item.id);
+                }
+                setDraggedItemId(item.id);
+              }}
+            >
               ⋮⋮
             </span>
             <span aria-hidden="true" className="checklist-row__index">

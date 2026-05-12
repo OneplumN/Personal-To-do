@@ -2392,6 +2392,19 @@ body.sortable-dragging * {
   -webkit-user-select: none !important;
 }
 
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .sortable-drag-preview {
   cursor: grabbing;
   opacity: 0.96 !important;
@@ -2621,16 +2634,15 @@ body.sortable-dragging * {
   border-radius: 18px;
   display: grid;
   gap: 6px;
-  grid-template-rows: auto 1fr;
-  height: 100%;
-  min-height: 136px;
+  grid-template-rows: auto auto;
+  min-height: 0;
   overflow: hidden;
   overscroll-behavior: none;
   padding: 12px 14px;
 }
 
 .focus-card__tasklist-items {
-  align-content: center;
+  align-content: start;
   color: var(--text-secondary);
   display: grid;
   gap: 4px;
@@ -2660,6 +2672,7 @@ body.sortable-dragging * {
 .focus-card__tasklist-text {
   display: block;
   line-height: 1.35;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3960,7 +3973,12 @@ body.sortable-dragging * {
   cursor: grab;
   font-size: 1rem;
   letter-spacing: -0.15em;
+  touch-action: none;
   user-select: none;
+}
+
+.checklist-row__drag-handle:active {
+  cursor: grabbing;
 }
 
 .checklist-row__index {

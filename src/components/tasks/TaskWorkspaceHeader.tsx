@@ -24,15 +24,6 @@ export function TaskWorkspaceHeader({
     setIsCreating(false);
   }
 
-  function handleTitleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key !== "Enter" || event.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-    event.currentTarget.form?.requestSubmit();
-  }
-
   useEffect(() => {
     if (createRequestKey === undefined || createRequestKey === 0) {
       return;
@@ -64,7 +55,6 @@ export function TaskWorkspaceHeader({
               aria-label="任务标题"
               autoFocus
               onChange={(event) => setTitle(event.target.value)}
-              onKeyDown={handleTitleKeyDown}
               placeholder="任务标题"
               rows={2}
               value={title}

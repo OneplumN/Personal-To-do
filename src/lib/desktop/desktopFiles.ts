@@ -2,15 +2,20 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { isTauriRuntime } from "../platform/runtime";
 
+export type DesktopFileSaveResult = "canceled" | "saved" | "unsupported";
+export type DesktopFileOpenResult =
+  | { status: "canceled" | "unsupported" }
+  | { contents: string; status: "opened" };
+
 export async function saveTextFile({
   contents,
   defaultPath,
 }: {
   contents: string;
   defaultPath: string;
-}) {
+}): Promise<DesktopFileSaveResult> {
   if (!isTauriRuntime()) {
-    return false;
+    return "unsupported";
   }
 
   const filePath = await save({
@@ -19,16 +24,20 @@ export async function saveTextFile({
   });
 
   if (!filePath) {
-    return true;
+    return "canceled";
   }
 
   await writeTextFile(filePath, contents);
-  return true;
+  const savedContents = await readTextFile(filePath);
+  if (savedContents !== contents) {
+    throw new Error("导出校验失败，请重新选择保存位置");
+  }
+  return "saved";
 }
 
-export async function openTextFile() {
+export async function openTextFile(): Promise<DesktopFileOpenResult> {
   if (!isTauriRuntime()) {
-    return null;
+    return { status: "unsupported" };
   }
 
   const filePath = await open({
@@ -38,8 +47,11 @@ export async function openTextFile() {
   });
 
   if (!filePath || Array.isArray(filePath)) {
-    return "";
+    return { status: "canceled" };
   }
 
-  return readTextFile(filePath);
+  return {
+    contents: await readTextFile(filePath),
+    status: "opened",
+  };
 }

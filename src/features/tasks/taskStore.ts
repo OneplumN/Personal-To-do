@@ -7,6 +7,7 @@ import {
   createChecklistItem,
   createTask,
   moveChecklistItem,
+  moveChecklistItemToIndex,
   removeChecklistItem,
   type Task,
   type TaskCreateInput,
@@ -32,6 +33,11 @@ type TaskState = {
     taskId: string,
     itemId: string,
     direction: "up" | "down",
+  ) => Promise<Task | null>;
+  moveChecklistItemToIndex: (
+    taskId: string,
+    itemId: string,
+    toIndex: number,
   ) => Promise<Task | null>;
   removeTask: (taskId: string) => Promise<void>;
   removeChecklistItem: (taskId: string, itemId: string) => Promise<Task | null>;
@@ -115,6 +121,17 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       return null;
     }
     const nextTask = moveChecklistItem(task, itemId, direction);
+    await taskRepository.save(nextTask);
+    set({ tasks: replaceTask(get().tasks, nextTask) });
+    queueLocalSnapshotSync();
+    return nextTask;
+  },
+  async moveChecklistItemToIndex(taskId, itemId, toIndex) {
+    const task = get().tasks.find((item) => item.id === taskId);
+    if (!task) {
+      return null;
+    }
+    const nextTask = moveChecklistItemToIndex(task, itemId, toIndex);
     await taskRepository.save(nextTask);
     set({ tasks: replaceTask(get().tasks, nextTask) });
     queueLocalSnapshotSync();

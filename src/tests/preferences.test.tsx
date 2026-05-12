@@ -5,12 +5,23 @@ import { App } from "../app/App";
 import { DEFAULT_PREFERENCES } from "../lib/constants";
 import { resetDatabase } from "../lib/storage/db";
 import { preferenceRepository } from "../lib/storage/preferenceRepository";
+import { projectRepository } from "../lib/storage/projectRepository";
+import { taskRepository } from "../lib/storage/taskRepository";
 import { useFocusStore } from "../features/focus/focusStore";
 import { usePreferenceStore } from "../features/preferences/preferenceStore";
 import { useProjectStore } from "../features/projects/projectStore";
 import { useReportStore } from "../features/reports/reportStore";
 import { useTaskStore } from "../features/tasks/taskStore";
+import { createProject } from "../types/project";
+import { createTask } from "../types/task";
 import { renderWithRouter } from "./test-utils";
+
+const desktopFileMocks = vi.hoisted(() => ({
+  openTextFile: vi.fn(),
+  saveTextFile: vi.fn(),
+}));
+
+vi.mock("../lib/desktop/desktopFiles", () => desktopFileMocks);
 
 describe("preferences store", () => {
   afterEach(() => {
@@ -19,6 +30,8 @@ describe("preferences store", () => {
 
   beforeEach(async () => {
     await resetDatabase();
+    desktopFileMocks.openTextFile.mockResolvedValue({ status: "unsupported" });
+    desktopFileMocks.saveTextFile.mockResolvedValue("unsupported");
     usePreferenceStore.setState({
       isLoaded: false,
       preferences: DEFAULT_PREFERENCES,
@@ -64,7 +77,7 @@ describe("preferences store", () => {
     );
     await user.click(screen.getByRole("button", { name: "数据 备份与数据库" }));
     expect(screen.getByRole("button", { name: "创建备份" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Import/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "恢复数据" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "关闭设置" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "关闭" })).toBeInTheDocument();
@@ -72,6 +85,108 @@ describe("preferences store", () => {
     await waitFor(() => {
       expect(screen.queryByRole("heading", { name: "设置" })).not.toBeInTheDocument();
     });
+  });
+
+  test("does not show exported feedback when desktop export is canceled", async () => {
+    desktopFileMocks.saveTextFile.mockResolvedValue("canceled");
+    const user = userEvent.setup();
+    renderWithRouter(<App />);
+
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: "数据 备份与数据库" }));
+    await user.click(screen.getByRole("button", { name: "创建备份" }));
+
+    await waitFor(() => {
+      expect(desktopFileMocks.saveTextFile).toHaveBeenCalled();
+    });
+    expect(screen.queryByText("已导出")).not.toBeInTheDocument();
+  });
+
+  test("shows an export failure when desktop export cannot be written", async () => {
+    desktopFileMocks.saveTextFile.mockRejectedValue(new Error("导出校验失败"));
+    const user = userEvent.setup();
+    renderWithRouter(<App />);
+
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: "数据 备份与数据库" }));
+    await user.click(screen.getByRole("button", { name: "创建备份" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("导出失败：导出校验失败")).toBeInTheDocument();
+    });
+  });
+
+  test("imports a snapshot from settings after confirmation", async () => {
+    const oldProject = createProject({ name: "Old Project" });
+    const oldTask = createTask({ projectId: oldProject.id, title: "Old Task" });
+    await projectRepository.save(oldProject);
+    await taskRepository.save(oldTask);
+
+    const importedSnapshot = {
+      exportedAt: "2026-05-11T10:00:00.000Z",
+      focusRefs: [],
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        theme: "dark" as const,
+        updatedAt: "2026-05-11T10:00:00.000Z",
+      },
+      projects: [
+        {
+          createdAt: "2026-05-11T10:00:00.000Z",
+          description: "",
+          id: "project-imported-settings",
+          manualProgressNote: "",
+          manualProgressOverride: null,
+          name: "Imported Settings Project",
+          updatedAt: "2026-05-11T10:00:00.000Z",
+        },
+      ],
+      reports: [],
+      tasks: [
+        {
+          body: "",
+          checklist: [],
+          completionWrapUp: null,
+          createdAt: "2026-05-11T10:00:00.000Z",
+          id: "task-imported-settings",
+          notes: "",
+          priority: "normal" as const,
+          progressLog: [],
+          projectId: "project-imported-settings",
+          status: "todo" as const,
+          title: "Imported Settings Task",
+          updatedAt: "2026-05-11T10:00:00.000Z",
+        },
+      ],
+      version: 1 as const,
+    };
+    const user = userEvent.setup();
+    renderWithRouter(<App />);
+
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(await screen.findByRole("button", { name: "数据 备份与数据库" }));
+    await user.click(screen.getByRole("button", { name: "恢复数据" }));
+    expect(screen.getByRole("button", { name: "确认恢复数据" })).toBeInTheDocument();
+
+    await user.upload(
+      screen.getByLabelText("选择备份文件"),
+      new File([JSON.stringify(importedSnapshot)], "snapshot.json", {
+        type: "application/json",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("已恢复 1 个项目 / 1 个任务 / 0 个报告")).toBeInTheDocument();
+      expect(useProjectStore.getState().projects[0]?.name).toBe("Imported Settings Project");
+      expect(useTaskStore.getState().tasks[0]?.title).toBe("Imported Settings Task");
+      expect(usePreferenceStore.getState().preferences.theme).toBe("dark");
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Imported Settings Task")).toBeInTheDocument();
+    });
+    expect(useProjectStore.getState().projects.some((project) => project.name === "Old Project")).toBe(
+      false,
+    );
   });
 
   test("toggles theme from the app navigation", async () => {

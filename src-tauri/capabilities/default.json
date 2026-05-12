@@ -9,6 +9,9 @@
     "fs:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
+    "fs:scope-desktop",
+    "fs:scope-document",
+    "fs:scope-download",
     "sql:default",
     "sql:allow-execute",
     "sql:allow-load"

@@ -120,6 +120,33 @@ export function moveChecklistItem(
   };
 }
 
+export function moveChecklistItemToIndex(
+  task: Task,
+  itemId: string,
+  toIndex: number,
+  now = new Date().toISOString(),
+): Task {
+  const fromIndex = task.checklist.findIndex((item) => item.id === itemId);
+  if (fromIndex === -1) {
+    return task;
+  }
+
+  const boundedIndex = Math.max(0, Math.min(toIndex, task.checklist.length - 1));
+  if (fromIndex === boundedIndex) {
+    return task;
+  }
+
+  const checklist = [...task.checklist];
+  const [item] = checklist.splice(fromIndex, 1);
+  checklist.splice(boundedIndex, 0, item);
+
+  return {
+    ...task,
+    checklist,
+    updatedAt: now,
+  };
+}
+
 export function getChecklistProgress(task: Task) {
   const total = task.checklist.length;
   const completed = task.checklist.filter((item) => item.done).length;

@@ -78,7 +78,10 @@ describe("Task detail", () => {
     expect(firstRow).not.toBeNull();
     expect(secondRow).not.toBeNull();
 
-    fireEvent.dragStart(secondRow as HTMLElement);
+    const secondDragHandle = (secondRow as HTMLElement).querySelector(".checklist-row__drag-handle");
+    expect(secondDragHandle).not.toBeNull();
+
+    fireEvent.dragStart(secondDragHandle as HTMLElement);
     fireEvent.dragOver(firstRow as HTMLElement);
     fireEvent.drop(firstRow as HTMLElement);
     fireEvent.dragEnd(secondRow as HTMLElement);
