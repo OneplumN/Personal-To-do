@@ -1,4 +1,3 @@
-import { demoSnapshot } from "../demo/demoSnapshot";
 import { exportSnapshot, type AppSnapshot } from "../export/exportSnapshot";
 import { importSnapshot, validateSnapshot } from "../import/importSnapshot";
 
@@ -75,7 +74,12 @@ export function restoreLocalSnapshot() {
 
     isRestoringLocalSnapshot = true;
     try {
-      await importSnapshot(hasSnapshotData(snapshotToRestore) ? snapshotToRestore : demoSnapshot);
+      if (hasSnapshotData(snapshotToRestore)) {
+        await importSnapshot(snapshotToRestore);
+      } else {
+        const { demoSnapshot } = await import("../demo/demoSnapshot");
+        await importSnapshot(demoSnapshot);
+      }
     } finally {
       isRestoringLocalSnapshot = false;
     }

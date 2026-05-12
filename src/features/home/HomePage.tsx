@@ -260,7 +260,7 @@ export function HomePage() {
               <input
                 autoFocus
                 onChange={(event) => setProjectName(event.target.value)}
-                placeholder="例如：品牌升级"
+                placeholder="例如：产品优化"
                 value={projectName}
               />
             </label>
