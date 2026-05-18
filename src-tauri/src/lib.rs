@@ -1,10 +1,11 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 fn sqlite_migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "create personal to-do tables",
-        sql: "
+    vec![
+        Migration {
+            version: 1,
+            description: "create personal to-do tables",
+            sql: "
             CREATE TABLE IF NOT EXISTS projects (
                 id TEXT PRIMARY KEY NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -41,8 +42,65 @@ fn sqlite_migrations() -> Vec<Migration> {
                 payload_json TEXT NOT NULL
             );
         ",
-        kind: MigrationKind::Up,
-    }]
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "remove accidentally bundled demo data",
+            sql: "
+            DELETE FROM focus_refs
+            WHERE task_id IN (
+                'task-long-title',
+                'task-blocked',
+                'task-complete',
+                'task-polish-focus-card',
+                'task-data-storage-consistency'
+            );
+
+            DELETE FROM reports
+            WHERE id IN (
+                'report-daily-2026-04-29',
+                'report-daily-2026-04-28',
+                'report-daily-2026-04-27',
+                'report-weekly-2026-w18',
+                'report-monthly-2026-04'
+            );
+
+            DELETE FROM tasks
+            WHERE id IN (
+                'task-long-title',
+                'task-blocked',
+                'task-complete',
+                'task-polish-home-density',
+                'task-polish-focus-card',
+                'task-polish-modal-actions',
+                'task-report-source',
+                'task-report-center-state',
+                'task-data-storage-consistency',
+                'task-data-import-guard',
+                'task-mobile-home-review',
+                'task-mobile-project-review'
+            )
+            OR project_id IN (
+                'project-qa-demo',
+                'project-product-polish',
+                'project-report-automation',
+                'project-data-safety',
+                'project-mobile-review'
+            );
+
+            DELETE FROM projects
+            WHERE id IN (
+                'project-qa-demo',
+                'project-product-polish',
+                'project-report-automation',
+                'project-data-safety',
+                'project-mobile-review'
+            );
+        ",
+            kind: MigrationKind::Up,
+        },
+    ]
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
