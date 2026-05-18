@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS DMG
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check
+        run: npm run check
+
+      - name: Test
+        run: npm test
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Rename DMG artifact
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cp /tmp/yibu-tauri-target/release/bundle/dmg/一步_${VERSION}_aarch64.dmg "yibu_${VERSION}_aarch64.dmg"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: yibu_*_aarch64.dmg
+          generate_release_notes: true
