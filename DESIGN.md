@@ -1,8 +1,8 @@
-# Personal-To-do Design System
+# Yibu Design System
 
 ## 1. Visual Theme & Atmosphere
 
-Personal-To-do is a **single-user, local-first desk journal for task flow**. It should feel like a calm personal workspace rather than a corporate dashboard.
+Yibu is a **single-user, local-first desk journal for task flow**. It should feel like a calm personal workspace rather than a corporate dashboard.
 
 The design language combines:
 - **Notion-like warmth** in surfaces and reading comfort

@@ -11,6 +11,7 @@ src-tauri/gen
 vite.config.js
 vite.config.d.ts
 .codex/
+docs/plans/
 release/
 *.db
 *.db-shm
