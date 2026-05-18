@@ -219,6 +219,26 @@ describe("preferences store", () => {
     });
   });
 
+  test("records a custom today step shortcut from settings", async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<App />);
+
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    await screen.findByRole("heading", { name: "设置" });
+    await user.click(screen.getByRole("button", { name: "外观 主题与颜色" }));
+
+    const shortcutInput = screen.getByLabelText("今日执行快捷键");
+    expect(shortcutInput).toHaveValue("Alt+Space");
+    await user.click(shortcutInput);
+    await user.keyboard("{Control>}{Shift>}k{/Shift}{/Control}");
+    expect(shortcutInput).toHaveValue("Ctrl+Shift+K");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(usePreferenceStore.getState().preferences.todayStepShortcut).toBe("Ctrl+Shift+K");
+    });
+  });
+
   test("saves and switches user AI roles from settings", async () => {
     const user = userEvent.setup();
     renderWithRouter(<App />);

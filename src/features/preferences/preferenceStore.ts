@@ -21,6 +21,10 @@ type PreferenceState = {
         | "aiRolePresets"
         | "aiRoleTemplates"
         | "laneColors"
+        | "todayStepDocked"
+        | "todayStepHandlePosition"
+        | "todayStepPinned"
+        | "todayStepShortcut"
         | "theme"
       >
     >,

@@ -5,7 +5,12 @@ import {
   DEFAULT_AI_ROLE_TEMPLATES,
   DEFAULT_PREFERENCES,
 } from "../constants";
-import type { AiProfile, AiRoleTemplate, Preferences } from "../../types/preferences";
+import type {
+  AiProfile,
+  AiRoleTemplate,
+  Preferences,
+  TodayStepHandlePosition,
+} from "../../types/preferences";
 
 function normalizeAiProfile(profile: Partial<AiProfile>): AiProfile | null {
   if (
@@ -55,7 +60,37 @@ function normalizeAiModels(models: unknown, activeModel: unknown) {
   return uniqueModels;
 }
 
+function normalizeTodayStepHandlePosition(position: unknown): TodayStepHandlePosition {
+  if (!position || typeof position !== "object") {
+    return DEFAULT_PREFERENCES.todayStepHandlePosition;
+  }
+
+  const candidate = position as Partial<TodayStepHandlePosition>;
+  const edge = candidate.edge === "left" || candidate.edge === "right" ? candidate.edge : "right";
+  const monitorName =
+    typeof candidate.monitorName === "string" && candidate.monitorName.trim()
+      ? candidate.monitorName
+      : undefined;
+  const monitorX =
+    typeof candidate.monitorX === "number" && Number.isFinite(candidate.monitorX)
+      ? candidate.monitorX
+      : undefined;
+  const monitorY =
+    typeof candidate.monitorY === "number" && Number.isFinite(candidate.monitorY)
+      ? candidate.monitorY
+      : undefined;
+  const yRatio =
+    typeof candidate.yRatio === "number" && Number.isFinite(candidate.yRatio)
+      ? Math.min(1, Math.max(0, candidate.yRatio))
+      : DEFAULT_PREFERENCES.todayStepHandlePosition.yRatio;
+
+  return { edge, monitorName, monitorX, monitorY, yRatio };
+}
+
 function normalizePreferences(preferences?: Partial<Preferences>): Preferences {
+  const legacyPreferences = preferences as
+    | (Partial<Preferences> & { quickStepShortcut?: unknown })
+    | undefined;
   const legacyProfile: AiProfile = {
     ...DEFAULT_AI_PROFILES[0],
     apiKey: preferences?.aiKey ?? "",
@@ -138,6 +173,23 @@ function normalizePreferences(preferences?: Partial<Preferences>): Preferences {
       ...DEFAULT_PREFERENCES.laneColors,
       ...preferences?.laneColors,
     },
+    todayStepShortcut:
+      typeof preferences?.todayStepShortcut === "string"
+        ? preferences.todayStepShortcut
+        : typeof legacyPreferences?.quickStepShortcut === "string"
+          ? legacyPreferences.quickStepShortcut
+          : DEFAULT_PREFERENCES.todayStepShortcut,
+    todayStepDocked:
+      typeof preferences?.todayStepDocked === "boolean"
+        ? preferences.todayStepDocked
+        : DEFAULT_PREFERENCES.todayStepDocked,
+    todayStepHandlePosition: normalizeTodayStepHandlePosition(
+      preferences?.todayStepHandlePosition,
+    ),
+    todayStepPinned:
+      typeof preferences?.todayStepPinned === "boolean"
+        ? preferences.todayStepPinned
+        : DEFAULT_PREFERENCES.todayStepPinned,
   };
 }
 

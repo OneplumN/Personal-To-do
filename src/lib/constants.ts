@@ -109,6 +109,13 @@ export const DEFAULT_PREFERENCES: Preferences = {
     done: "#34D399",
     task: "#FFB347",
   },
+  todayStepDocked: false,
+  todayStepHandlePosition: {
+    edge: "right",
+    yRatio: 0.5,
+  },
+  todayStepPinned: true,
+  todayStepShortcut: "Alt+Space",
   theme: "light",
   updatedAt: new Date(0).toISOString(),
 };

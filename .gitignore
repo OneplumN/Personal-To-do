@@ -10,3 +10,10 @@ src-tauri/target
 src-tauri/gen
 vite.config.js
 vite.config.d.ts
+.codex/
+release/
+*.db
+*.db-shm
+*.db-wal
+yibu-*-snapshot-*.json
+yibu-snapshot-*.json

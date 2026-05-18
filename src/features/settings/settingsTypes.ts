@@ -29,6 +29,9 @@ export type SavePreferences = (
       | "aiRolePresets"
       | "aiRoleTemplates"
       | "laneColors"
+      | "todayStepDocked"
+      | "todayStepHandlePosition"
+      | "todayStepPinned"
       | "theme"
     >
   >,

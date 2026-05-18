@@ -12,13 +12,55 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "一步",
         "width": 1280,
         "height": 860,
         "minWidth": 1080,
         "minHeight": 720,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 12,
+          "y": 12
+        },
         "resizable": true,
         "fullscreen": false
+      },
+      {
+        "label": "today-step",
+        "title": "今日",
+        "url": "/today-step",
+        "width": 440,
+        "height": 620,
+        "minWidth": 360,
+        "minHeight": 520,
+        "alwaysOnTop": true,
+        "visibleOnAllWorkspaces": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 12,
+          "y": 12
+        },
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false
+      },
+      {
+        "label": "today-step-handle",
+        "title": "今日",
+        "url": "/today-step-handle",
+        "width": 48,
+        "height": 156,
+        "minWidth": 48,
+        "minHeight": 156,
+        "alwaysOnTop": true,
+        "visibleOnAllWorkspaces": true,
+        "decorations": false,
+        "resizable": false,
+        "fullscreen": false,
+        "visible": false
       }
     ],
     "security": {

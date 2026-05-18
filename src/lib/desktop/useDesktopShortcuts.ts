@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { isTauriRuntime } from "../platform/runtime";
+import { doesKeyboardEventMatchShortcut } from "./shortcutKeys";
 
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
@@ -17,9 +18,13 @@ function isEditableTarget(target: EventTarget | null) {
 export function useDesktopShortcuts({
   onNew,
   onOpenSettings,
+  onOpenTodayStep,
+  todayStepShortcut,
 }: {
   onNew: () => void;
   onOpenSettings: () => void;
+  onOpenTodayStep: () => void;
+  todayStepShortcut: string;
 }) {
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -27,6 +32,15 @@ export function useDesktopShortcuts({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
+      if (
+        !isEditableTarget(event.target) &&
+        doesKeyboardEventMatchShortcut(event, todayStepShortcut)
+      ) {
+        event.preventDefault();
+        onOpenTodayStep();
+        return;
+      }
+
       const hasPrimaryModifier = event.metaKey || event.ctrlKey;
       if (!hasPrimaryModifier) {
         return;
@@ -48,5 +62,5 @@ export function useDesktopShortcuts({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onNew, onOpenSettings]);
+  }, [onNew, onOpenTodayStep, onOpenSettings, todayStepShortcut]);
 }

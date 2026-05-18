@@ -16,6 +16,7 @@ import { AiRoleSettings } from "./AiRoleSettings";
 import { SettingsExportIcon } from "./settingsIcons";
 import { useAiProviderSettings } from "./useAiProviderSettings";
 import { useAiRoleSettings } from "./useAiRoleSettings";
+import { formatKeyboardShortcut } from "../../lib/desktop/shortcutKeys";
 import type { ConfirmingDelete } from "./settingsTypes";
 import type {
   AiProfile,
@@ -62,6 +63,10 @@ function getPreferenceDraftSnapshot(preferences: {
   aiRolePresets: unknown[];
   aiRoleTemplates: AiRoleTemplate[];
   laneColors: unknown;
+  todayStepDocked: boolean;
+  todayStepHandlePosition: unknown;
+  todayStepPinned: boolean;
+  todayStepShortcut: string;
   theme: string;
 }) {
   return JSON.stringify({
@@ -74,6 +79,10 @@ function getPreferenceDraftSnapshot(preferences: {
     aiRolePresets: preferences.aiRolePresets,
     aiRoleTemplates: preferences.aiRoleTemplates,
     laneColors: preferences.laneColors,
+    todayStepDocked: preferences.todayStepDocked,
+    todayStepHandlePosition: preferences.todayStepHandlePosition,
+    todayStepPinned: preferences.todayStepPinned,
+    todayStepShortcut: preferences.todayStepShortcut,
     theme: preferences.theme,
   });
 }
@@ -197,6 +206,10 @@ export function SettingsPage() {
       aiRolePresets: draft.aiRolePresets,
       aiRoleTemplates: draft.aiRoleTemplates,
       laneColors: draft.laneColors,
+      todayStepDocked: draft.todayStepDocked,
+      todayStepHandlePosition: draft.todayStepHandlePosition,
+      todayStepPinned: draft.todayStepPinned,
+      todayStepShortcut: draft.todayStepShortcut,
       theme: draft.theme,
     });
     setDraft(savedPreferences);
@@ -407,6 +420,44 @@ export function SettingsPage() {
                     </div>
                   );
                 })}
+              </div>
+              <div className="settings-section-note settings-shortcut-note">
+                <strong>今日执行快捷键</strong>
+                <span>在桌面应用激活时打开或聚焦今日执行。</span>
+              </div>
+              <div className="settings-shortcut-panel">
+                <label className="field settings-shortcut-field">
+                  <span>今日执行</span>
+                  <input
+                    aria-label="今日执行快捷键"
+                    onKeyDown={(event) => {
+                      event.preventDefault();
+                      const shortcut = formatKeyboardShortcut(event);
+                      if (!shortcut) {
+                        return;
+                      }
+                      setDraft((current) => ({
+                        ...current,
+                        todayStepShortcut: shortcut,
+                      }));
+                    }}
+                    placeholder="Alt+Space"
+                    readOnly
+                    value={draft.todayStepShortcut}
+                  />
+                </label>
+                <button
+                  className="settings-action-card settings-action-card--button settings-shortcut-clear"
+                  onClick={() => {
+                    setDraft((current) => ({
+                      ...current,
+                      todayStepShortcut: "",
+                    }));
+                  }}
+                  type="button"
+                >
+                  清除
+                </button>
               </div>
                 </section>
               ) : null}

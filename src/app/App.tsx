@@ -1,13 +1,22 @@
-import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { ListTodo, Moon, Sun } from "lucide-react";
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { HomePage } from "../features/home/HomePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { ToastProvider } from "../components/common/ToastProvider";
 import { usePreferenceStore } from "../features/preferences/preferenceStore";
 import { ProjectWorkspacePage } from "../features/projects/ProjectWorkspacePage";
 import { ReportCenterPage } from "../features/reports/ReportCenterPage";
+import { TodayStepHandlePage } from "../features/todayStep/TodayStepHandlePage";
+import { TodayStepPage } from "../features/todayStep/TodayStepPage";
 import { useAppBootstrap } from "./useAppBootstrap";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type PointerEvent } from "react";
 import { useDesktopShortcuts } from "../lib/desktop/useDesktopShortcuts";
+import { isTauriRuntime } from "../lib/platform/runtime";
+import {
+  TODAY_STEP_OPEN_TASK_EVENT,
+  enterTodayExecutionMode,
+  type MainWindowOpenTarget,
+} from "../lib/desktop/windowCommands";
 
 function PlaceholderPage({
   eyebrow,
@@ -27,33 +36,17 @@ function PlaceholderPage({
   );
 }
 
-function SunIcon() {
+function WindowModeIcon({ direction }: { direction: "enter" | "exit" }) {
   return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path
-        d="M12 4V2.5M12 21.5V20M4 12H2.5M21.5 12H20M6.34 6.34 5.28 5.28M18.72 18.72l-1.06-1.06M17.66 6.34l1.06-1.06M5.28 18.72l1.06-1.06"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M12 16.25A4.25 4.25 0 1 0 12 7.75a4.25 4.25 0 0 0 0 8.5Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path
-        d="M20 14.2A7.9 7.9 0 0 1 9.8 4 8.2 8.2 0 1 0 20 14.2Z"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
+    <svg
+      aria-hidden="true"
+      className={`window-mode-icon window-mode-icon--${direction}`}
+      viewBox="0 0 18 18"
+    >
+      <rect className="window-mode-icon__frame" height="12" rx="2.6" width="15" x="1.5" y="3" />
+      <path className="window-mode-icon__divider" d="M7 3.8v10.4" />
+      <path className="window-mode-icon__arrow" d="M12.6 6.2 15 9l-2.4 2.8" />
+      <path className="window-mode-icon__arrow" d="M8.8 9H15" />
     </svg>
   );
 }
@@ -83,12 +76,90 @@ export function App() {
     document.documentElement.style.setProperty("--lane-done", preferences.laneColors.done);
   }, [preferences]);
 
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return undefined;
+    }
+
+    let unlisten: (() => void) | undefined;
+    void Promise.all([
+      import("@tauri-apps/api/event"),
+      import("@tauri-apps/api/window"),
+    ]).then(([{ listen }, { getCurrentWindow }]) => {
+      if (getCurrentWindow().label !== "main") {
+        return;
+      }
+
+      void listen<MainWindowOpenTarget>(TODAY_STEP_OPEN_TASK_EVENT, (event) => {
+        if (event.payload.projectId) {
+          navigate(`/projects/${event.payload.projectId}`);
+        } else {
+          navigate("/");
+        }
+      }).then((nextUnlisten) => {
+        unlisten = nextUnlisten;
+      });
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (
+      !isTauriRuntime() ||
+      location.pathname === "/today-step" ||
+      location.pathname === "/today-step-handle"
+    ) {
+      return;
+    }
+
+    void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+      const currentWindow = getCurrentWindow();
+      if (currentWindow.label === "today-step") {
+        navigate("/today-step", { replace: true });
+      } else if (currentWindow.label === "today-step-handle") {
+        navigate("/today-step-handle", { replace: true });
+      }
+    });
+  }, [location.pathname, navigate]);
+
+  const isTodayStep = location.pathname === "/today-step";
+  const isTodayStepHandle = location.pathname === "/today-step-handle";
+  const isLegacyTodayStep = location.pathname === "/quick-step";
   const isProjectWorkspace = location.pathname.startsWith("/projects");
   const shellClassName = useMemo(() => {
     const routeModifier = isProjectWorkspace ? " app-shell--project-workspace" : "";
     return `app-shell app-shell--${preferences.theme}${routeModifier}`;
   }, [isProjectWorkspace, preferences.theme]);
   const nextTheme = preferences.theme === "light" ? "dark" : "light";
+  async function openTodayExecution() {
+    if (preferences.todayStepDocked) {
+      void savePreferences({ todayStepDocked: false });
+    }
+    const enteredInlineMode = await enterTodayExecutionMode(location.pathname);
+    if (enteredInlineMode) {
+      navigate("/today-step");
+    }
+  }
+
+  async function startMainWindowDrag(event: PointerEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement | null;
+    if (
+      target?.closest("button, a, input, textarea, select, [data-no-window-drag]") ||
+      !isTauriRuntime()
+    ) {
+      return;
+    }
+
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    const currentWindow = getCurrentWindow();
+    if (currentWindow.label === "main") {
+      await currentWindow.startDragging();
+    }
+  }
+
   useDesktopShortcuts({
     onNew: () => {
       window.dispatchEvent(new CustomEvent("personal-todo:new-primary"));
@@ -96,11 +167,76 @@ export function App() {
     onOpenSettings: () => {
       void navigate("/settings");
     },
+    onOpenTodayStep: () => {
+      void openTodayExecution();
+    },
+    todayStepShortcut: preferences.todayStepShortcut,
   });
+
+  if (isTodayStepHandle) {
+    return (
+      <ToastProvider>
+        {ready ? (
+          <TodayStepHandlePage />
+        ) : (
+          <main className="today-step-handle-shell">
+            <button className="today-step-edge-handle" disabled type="button">
+              <span className="today-step-edge-handle__mark"><ListTodo aria-hidden="true" strokeWidth={2} /></span>
+              <span className="today-step-edge-handle__label">今日</span>
+              <strong>0</strong>
+              <span className="today-step-edge-handle__grip" aria-hidden="true"><span /><span /><span /></span>
+            </button>
+          </main>
+        )}
+      </ToastProvider>
+    );
+  }
+
+  if (isTodayStep || isLegacyTodayStep) {
+    return (
+      <ToastProvider>
+        <main className="today-step-shell">
+          {!ready ? (
+            <section className="today-step" aria-label="Loading">
+              <p className="today-step__eyebrow">启动中</p>
+              <h1>今日</h1>
+              <div className="today-step__empty">正在准备工作区。</div>
+            </section>
+          ) : (
+            <Routes>
+              <Route element={<TodayStepPage />} path="/today-step" />
+              <Route element={<Navigate replace to="/today-step" />} path="/quick-step" />
+            </Routes>
+          )}
+        </main>
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>
       <div className={shellClassName}>
+        <div
+          className="app-titlebar"
+          data-tauri-drag-region
+          onPointerDown={(event) => {
+            void startMainWindowDrag(event);
+          }}
+        >
+          <button
+            aria-label="开启今日执行"
+            className="app-titlebar__today-button"
+            data-no-window-drag
+            data-tooltip={`今日执行 ${preferences.todayStepShortcut}`}
+            onClick={() => {
+              void openTodayExecution();
+            }}
+            title={`开启今日执行：${preferences.todayStepShortcut}`}
+            type="button"
+          >
+            <WindowModeIcon direction="enter" />
+          </button>
+        </div>
         <header className="app-header">
           <div className="app-header__intro">
             <p className="app-header__date">{todayLabel}</p>
@@ -118,7 +254,7 @@ export function App() {
                 title={preferences.theme === "light" ? "深色" : "浅色"}
                 type="button"
               >
-                {preferences.theme === "light" ? <MoonIcon /> : <SunIcon />}
+                {preferences.theme === "light" ? <Moon aria-hidden="true" strokeWidth={1.9} /> : <Sun aria-hidden="true" strokeWidth={1.9} />}
               </button>
               <NavLink
                 className={({ isActive }) =>
@@ -175,6 +311,9 @@ export function App() {
               <Route element={<SettingsPage />} path="/settings" />
               <Route element={<ProjectWorkspacePage />} path="/projects" />
               <Route element={<ProjectWorkspacePage />} path="/projects/:projectId" />
+              <Route element={<TodayStepPage />} path="/today-step" />
+              <Route element={<TodayStepHandlePage />} path="/today-step-handle" />
+              <Route element={<Navigate replace to="/today-step" />} path="/quick-step" />
             </Routes>
           )}
         </main>

@@ -48,6 +48,7 @@ export function ProjectWorkspacePage() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [createTaskRequestKey, setCreateTaskRequestKey] = useState(0);
   const selectedProjectId = projectId ?? searchParams.get("project") ?? projects[0]?.id ?? null;
+  const selectedTaskQueryId = searchParams.get("task");
   const focusTaskIds = useMemo(
     () => focusRefs.map((reference) => reference.taskId),
     [focusRefs],
@@ -64,6 +65,15 @@ export function ProjectWorkspacePage() {
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
     [selectedProjectId, tasks],
   );
+
+  useEffect(() => {
+    if (
+      selectedTaskQueryId &&
+      projectTasks.some((task) => task.id === selectedTaskQueryId)
+    ) {
+      setActiveTaskId(selectedTaskQueryId);
+    }
+  }, [projectTasks, selectedTaskQueryId]);
 
   if (projects.length === 0) {
     return (

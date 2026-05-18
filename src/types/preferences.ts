@@ -6,6 +6,14 @@ export type LaneColors = {
   done: string;
 };
 
+export type TodayStepHandlePosition = {
+  edge: "left" | "right";
+  monitorName?: string;
+  monitorX?: number;
+  monitorY?: number;
+  yRatio: number;
+};
+
 export type AiRolePreset = {
   id: string;
   label: string;
@@ -51,5 +59,9 @@ export type Preferences = {
   activeAiRoleTemplateId: string;
   aiProfiles: AiProfile[];
   aiRoleTemplates: AiRoleTemplate[];
+  todayStepDocked: boolean;
+  todayStepHandlePosition: TodayStepHandlePosition;
+  todayStepPinned: boolean;
+  todayStepShortcut: string;
   updatedAt: string;
 };

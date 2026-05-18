@@ -46,9 +46,22 @@
   --swipe-remove-bg: linear-gradient(90deg, #ef4444, #dc2626);
   --swipe-done-bg: linear-gradient(90deg, #10b981, #059669);
   --swipe-text: #ffffff;
+  --status-todo-bg: color-mix(in srgb, var(--lane-task) 18%, var(--surface-base));
+  --status-todo-bg-raised: color-mix(in srgb, var(--lane-task) 18%, var(--surface-raised));
+  --status-todo-border: color-mix(in srgb, var(--lane-task) 24%, transparent);
   --status-todo-text: #5e3a00;
+  --status-doing-bg: color-mix(in srgb, var(--lane-doing) 18%, var(--surface-base));
+  --status-doing-bg-raised: color-mix(in srgb, var(--lane-doing) 18%, var(--surface-raised));
+  --status-doing-border: color-mix(in srgb, var(--lane-doing) 24%, transparent);
   --status-doing-text: #0369a1;
-  --status-blocked-text: #4c56d9;
+  --status-blocked-accent: #f59e0b;
+  --status-blocked-bg: color-mix(in srgb, var(--status-blocked-accent) 18%, var(--surface-base));
+  --status-blocked-bg-raised: color-mix(in srgb, var(--status-blocked-accent) 18%, var(--surface-raised));
+  --status-blocked-border: color-mix(in srgb, var(--status-blocked-accent) 28%, transparent);
+  --status-blocked-text: color-mix(in srgb, #9a5c08 88%, var(--text-secondary));
+  --status-done-bg: color-mix(in srgb, var(--lane-done) 18%, var(--surface-base));
+  --status-done-bg-raised: color-mix(in srgb, var(--lane-done) 18%, var(--surface-raised));
+  --status-done-border: color-mix(in srgb, var(--lane-done) 24%, transparent);
   --status-done-text: #0f5a39;
   --priority-normal-bg: #eef2f6;
   --priority-normal-text: #475569;
@@ -160,9 +173,22 @@ html[data-theme="dark"] {
   --swipe-remove-bg: linear-gradient(90deg, #7f1d1d, #991b1b);
   --swipe-done-bg: linear-gradient(90deg, #065f46, #047857);
   --swipe-text: #e2e8f0;
+  --status-todo-bg: color-mix(in srgb, var(--lane-task) 16%, var(--surface-base));
+  --status-todo-bg-raised: color-mix(in srgb, var(--lane-task) 16%, var(--surface-raised));
+  --status-todo-border: color-mix(in srgb, var(--lane-task) 26%, transparent);
   --status-todo-text: #ffd393;
+  --status-doing-bg: color-mix(in srgb, var(--lane-doing) 16%, var(--surface-base));
+  --status-doing-bg-raised: color-mix(in srgb, var(--lane-doing) 16%, var(--surface-raised));
+  --status-doing-border: color-mix(in srgb, var(--lane-doing) 26%, transparent);
   --status-doing-text: #8cd7ff;
-  --status-blocked-text: #c4c9ff;
+  --status-blocked-accent: #fbbf24;
+  --status-blocked-bg: color-mix(in srgb, var(--status-blocked-accent) 16%, var(--surface-base));
+  --status-blocked-bg-raised: color-mix(in srgb, var(--status-blocked-accent) 16%, var(--surface-raised));
+  --status-blocked-border: color-mix(in srgb, var(--status-blocked-accent) 30%, transparent);
+  --status-blocked-text: #ffd39a;
+  --status-done-bg: color-mix(in srgb, var(--lane-done) 16%, var(--surface-base));
+  --status-done-bg-raised: color-mix(in srgb, var(--lane-done) 16%, var(--surface-raised));
+  --status-done-border: color-mix(in srgb, var(--lane-done) 26%, transparent);
   --status-done-text: #9fe7c1;
   --priority-normal-bg: #233147;
   --priority-normal-text: #cbd5f5;
@@ -214,7 +240,686 @@ textarea::placeholder {
   max-width: 1440px;
   min-height: 0;
   overflow: hidden;
-  padding: 24px 32px;
+  padding: 58px 32px 24px;
+  position: relative;
+}
+
+.app-titlebar {
+  align-items: center;
+  display: flex;
+  height: 38px;
+  justify-content: flex-end;
+  left: 76px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 40;
+}
+
+.app-titlebar__today-button {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-base) 58%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 54%, transparent);
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--text-secondary) 88%, var(--text-muted));
+  cursor: pointer;
+  display: inline-flex;
+  height: 26px;
+  justify-content: center;
+  margin-right: 8px;
+  padding: 0;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+  width: 26px;
+}
+
+.app-titlebar__today-button:hover,
+.app-titlebar__today-button:focus-visible {
+  background: color-mix(in srgb, var(--surface-base) 82%, transparent);
+  border-color: color-mix(in srgb, var(--border-strong) 48%, transparent);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.today-step-shell {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 238, 197, 0.36), transparent 34%),
+    radial-gradient(circle at 100% 12%, rgba(232, 247, 255, 0.28), transparent 30%),
+    var(--canvas);
+  color: var(--text-primary);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  padding: 12px;
+  position: relative;
+}
+
+.today-step {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: grid;
+  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 58px 16px 16px;
+  position: relative;
+}
+
+.today-step-titlebar {
+  height: 38px;
+  left: 76px;
+  position: fixed;
+  right: 48px;
+  top: 0;
+  z-index: 2;
+}
+
+.today-step-top-controls {
+  -webkit-app-region: no-drag;
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  position: fixed;
+  right: 14px;
+  top: 7px;
+  z-index: 3;
+}
+
+.today-step-top-controls .today-step-icon-button {
+  height: 24px;
+  width: 24px;
+}
+
+.today-step-top-controls .today-step-icon-button svg {
+  height: 13px;
+  width: 13px;
+}
+
+.today-step__header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.today-step__header h1 {
+  align-items: center;
+  display: flex;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  gap: 8px;
+  letter-spacing: 0;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.today-step__eyebrow {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.today-step__count {
+  align-items: center;
+  background: color-mix(in srgb, var(--button-active-bg) 74%, var(--surface-base));
+  border: 1px solid color-mix(in srgb, var(--border-warm) 62%, transparent);
+  border-radius: 999px;
+  color: var(--button-active-text);
+  display: inline-flex;
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0 7px;
+}
+
+.today-step__header-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.today-step__empty {
+  align-content: start;
+  align-self: start;
+  border: 1px dashed color-mix(in srgb, var(--border-dashed) 70%, transparent);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 8px;
+  justify-self: stretch;
+  margin-top: 44px;
+  padding: 18px;
+  text-align: left;
+}
+
+.today-step__empty strong {
+  color: var(--text-primary);
+  font-size: 0.96rem;
+}
+
+.today-step__empty span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.today-step-empty-action {
+  align-self: start;
+  background: color-mix(in srgb, var(--surface-base) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 54%, transparent);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 4px;
+  padding: 8px 12px;
+}
+
+.today-step__list {
+  display: grid;
+  gap: 10px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+  min-height: 0;
+  overflow: auto;
+  padding: 0 10px 34px 0;
+  scroll-padding-bottom: 34px;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 12%, transparent) transparent;
+}
+
+.today-step__list:hover {
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 22%, transparent) transparent;
+}
+
+.today-step__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.today-step__list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  background-clip: padding-box;
+  border: 1px solid transparent;
+}
+
+.today-step__list:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+  background-clip: padding-box;
+}
+
+.today-step-task {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 74%, transparent), transparent 116%),
+    color-mix(in srgb, var(--surface-base) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 52%, transparent);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  position: relative;
+}
+
+.today-step-task--blocked {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--status-blocked-accent) 4%, transparent), transparent 116%),
+    color-mix(in srgb, var(--surface-base) 74%, transparent);
+  border-color: color-mix(in srgb, var(--border-soft) 58%, var(--status-blocked-accent));
+}
+
+.today-step-task--blocked::before {
+  background: color-mix(in srgb, var(--status-blocked-accent) 62%, transparent);
+  border-radius: 999px;
+  bottom: 12px;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 12px;
+  width: 3px;
+}
+
+.today-step-task__meta,
+.today-step-task__progress {
+  align-items: center;
+  color: var(--text-subtle);
+  display: flex;
+  font-size: 0.74rem;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.today-step-task__meta > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-step-task__status {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 3px 8px;
+}
+
+.today-step-task__status--blocked {
+  background: var(--status-blocked-bg);
+  border: 1px solid var(--status-blocked-border);
+  color: var(--status-blocked-text);
+}
+
+.today-step-task__status--in_progress {
+  background: var(--status-doing-bg);
+  border: 1px solid var(--status-doing-border);
+  color: var(--status-doing-text);
+}
+
+.today-step-task__status--todo {
+  background: var(--status-todo-bg);
+  border: 1px solid var(--status-todo-border);
+  color: var(--status-todo-text);
+}
+
+.today-step-task h2 {
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  line-height: 1.34;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.today-step-icon-button {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-base) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 58%, transparent);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    0 5px 12px rgba(31, 38, 52, 0.045);
+  color: var(--text-subtle);
+  cursor: pointer;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+  width: 30px;
+}
+
+.today-step-icon-button:hover,
+.today-step-icon-button:focus-visible {
+  border-color: color-mix(in srgb, var(--border-warm) 68%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 8px 16px rgba(31, 38, 52, 0.07);
+  color: var(--text-primary);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.today-step-icon-button svg {
+  height: 15px;
+  width: 15px;
+}
+
+.today-step-icon-button--return {
+  background: color-mix(in srgb, var(--surface-base) 70%, transparent);
+  color: var(--text-secondary);
+}
+
+.today-step-icon-button--dock {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: color-mix(in srgb, var(--text-secondary) 82%, var(--text-muted));
+}
+
+.today-step-icon-button--dock:hover,
+.today-step-icon-button--dock:focus-visible {
+  background: color-mix(in srgb, var(--surface-base) 62%, transparent);
+  border-color: color-mix(in srgb, var(--border-soft) 58%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.today-step-icon-button--mode {
+  background: color-mix(in srgb, var(--surface-base) 70%, transparent);
+  color: color-mix(in srgb, var(--text-secondary) 84%, var(--border-warm));
+}
+
+.today-step-icon-button--mode:hover,
+.today-step-icon-button--mode:focus-visible {
+  background: color-mix(in srgb, var(--button-active-bg) 76%, var(--surface-base));
+  border-color: color-mix(in srgb, var(--border-warm) 82%, transparent);
+  color: color-mix(in srgb, var(--button-active-text) 88%, var(--text-primary));
+}
+
+.window-mode-icon {
+  fill: none;
+  height: 16px !important;
+  overflow: visible;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.55;
+  transition:
+    opacity 160ms ease,
+    transform 190ms cubic-bezier(0.2, 0.9, 0.22, 1);
+  width: 16px !important;
+}
+
+.window-mode-icon--enter {
+  transform: scaleX(-1);
+  transform-origin: center;
+}
+
+.app-titlebar__today-button:hover .window-mode-icon--enter,
+.app-titlebar__today-button:focus-visible .window-mode-icon--enter {
+  transform: scaleX(-1) translateX(1.5px);
+}
+
+.today-step-icon-button--mode:hover .window-mode-icon--exit,
+.today-step-icon-button--mode:focus-visible .window-mode-icon--exit {
+  transform: translateX(1.5px);
+}
+
+.window-mode-icon__frame {
+  opacity: 0.96;
+}
+
+.window-mode-icon__divider {
+  opacity: 0.72;
+}
+
+.window-mode-icon__arrow {
+  opacity: 0.9;
+}
+
+.today-step-task__progress {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 42%, transparent);
+  padding-bottom: 6px;
+}
+
+.today-step-checklist {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.today-step-checklist li {
+  align-items: start;
+  color: var(--text-secondary);
+  display: grid;
+  font-size: 0.81rem;
+  gap: 8px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.today-step-checklist li span {
+  line-height: 1.42;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-step-checklist__toggle {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-base) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  border-radius: 999px;
+  color: var(--action-success);
+  cursor: pointer;
+  display: inline-flex;
+  height: 18px;
+  justify-content: center;
+  padding: 0;
+  width: 18px;
+}
+
+.today-step-checklist__toggle svg {
+  height: 12px;
+  width: 12px;
+}
+
+.today-step-checklist__more {
+  color: var(--text-muted);
+  display: block !important;
+  font-size: 0.75rem !important;
+  padding-left: 26px;
+}
+
+.today-step-task__quiet {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin: 0;
+}
+
+.today-step-task__actions {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.today-step-task-action {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-base) 64%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 58%, transparent);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    0 5px 12px rgba(31, 38, 52, 0.045);
+  color: var(--text-subtle);
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  opacity: 0.62;
+  padding: 0;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+  width: 28px;
+}
+
+.today-step-task:hover .today-step-task-action,
+.today-step-task:focus-within .today-step-task-action {
+  opacity: 1;
+}
+
+.today-step-task-action:hover,
+.today-step-task-action:focus-visible {
+  border-color: color-mix(in srgb, var(--border-warm) 68%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 8px 16px rgba(31, 38, 52, 0.07);
+  color: var(--text-primary);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.today-step-task-action--complete {
+  background: color-mix(in srgb, var(--lane-done) 10%, var(--surface-base));
+  color: color-mix(in srgb, var(--lane-done) 72%, var(--text-primary));
+}
+
+.today-step-task-action--complete:hover,
+.today-step-task-action--complete:focus-visible {
+  background: color-mix(in srgb, var(--lane-done) 22%, var(--surface-base));
+}
+
+.today-step-task-action--open {
+  background: color-mix(in srgb, var(--surface-base) 70%, transparent);
+  color: color-mix(in srgb, var(--text-secondary) 88%, var(--button-active-text));
+}
+
+.today-step-task-action--open:hover,
+.today-step-task-action--open:focus-visible {
+  background: color-mix(in srgb, var(--button-active-bg) 66%, var(--surface-base));
+}
+
+.today-step-task-action svg {
+  height: 15px;
+  width: 15px;
+}
+
+.today-step-task-action:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.today-step-handle-shell {
+  background: transparent;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  padding: 5px 3px;
+}
+
+.today-step-edge-handle {
+  align-items: center;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 86%, transparent), transparent 118%),
+    color-mix(in srgb, var(--surface-shell) 76%, var(--surface-muted));
+  border: 1px solid color-mix(in srgb, var(--border-soft) 70%, transparent);
+  border-radius: 20px 8px 8px 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 10px 24px rgba(17, 25, 40, 0.12);
+  color: var(--text-secondary);
+  cursor: grab;
+  display: grid;
+  gap: 8px;
+  grid-template-rows: 30px minmax(0, 1fr) 28px 18px;
+  height: 100%;
+  justify-items: center;
+  min-height: 0;
+  padding: 8px 6px 7px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+  width: 100%;
+}
+
+.today-step-edge-handle:active {
+  cursor: grabbing;
+}
+
+.today-step-edge-handle--left {
+  border-radius: 8px 20px 20px 8px;
+}
+
+.today-step-edge-handle--right {
+  border-radius: 20px 8px 8px 20px;
+}
+
+.today-step-edge-handle:hover,
+.today-step-edge-handle:focus-visible {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 94%, transparent), transparent 118%),
+    color-mix(in srgb, var(--button-active-bg) 28%, var(--surface-panel));
+  border-color: color-mix(in srgb, var(--border-warm) 54%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 12px 28px rgba(17, 25, 40, 0.16);
+  color: var(--text-primary);
+  outline: none;
+  transform: translateX(-2px);
+}
+
+.today-step-edge-handle--left:hover,
+.today-step-edge-handle--left:focus-visible {
+  transform: translateX(1px);
+}
+
+.today-step-edge-handle:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.today-step-edge-handle__mark {
+  align-items: center;
+  background: var(--surface-base);
+  border: 1px solid color-mix(in srgb, var(--border-warm) 54%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 5px 14px rgba(31, 38, 52, 0.08);
+  color: var(--button-active-text);
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.today-step-edge-handle__mark svg {
+  height: 16px;
+  width: 16px;
+}
+
+.today-step-edge-handle__label {
+  align-self: center;
+  color: color-mix(in srgb, var(--text-secondary) 82%, transparent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+}
+
+.today-step-edge-handle__grip {
+  align-items: center;
+  align-self: end;
+  display: inline-grid;
+  gap: 3px;
+  justify-items: center;
+  padding-bottom: 1px;
+}
+
+.today-step-edge-handle__grip span {
+  background: color-mix(in srgb, var(--text-muted) 46%, transparent);
+  border-radius: 999px;
+  display: block;
+  height: 2px;
+  width: 13px;
+}
+
+.today-step-edge-handle strong {
+  align-items: center;
+  background: var(--surface-base);
+  border: 1px solid color-mix(in srgb, var(--border-warm) 62%, transparent);
+  border-radius: 999px;
+  color: var(--button-active-text);
+  display: inline-flex;
+  box-shadow: 0 4px 10px rgba(31, 38, 52, 0.05);
+  font-size: 0.76rem;
+  height: 26px;
+  justify-content: center;
+  min-width: 24px;
 }
 
 .app-shell--dark {
@@ -368,17 +1073,23 @@ textarea::placeholder {
   transform 160ms ease;
 }
 
-.app-theme-toggle {
+.app-theme-toggle,
+.app-today-step-toggle {
   width: 34px;
 }
 
 .app-nav .app-theme-toggle {
-  margin: 0 8px 0 -2px;
+  margin: 0 4px 0 -2px;
 }
 
-.app-theme-toggle svg {
+.app-theme-toggle svg,
+.app-today-step-toggle svg {
   height: 17px;
   width: 17px;
+}
+
+.app-nav .app-today-step-toggle {
+  margin-right: 8px;
 }
 
 .app-tool-button:hover,
@@ -3096,7 +3807,7 @@ body.sortable-dragging * {
 }
 
 .current-push-card--blocked {
-  border-color: color-mix(in srgb, #7d8aff 30%, var(--border-soft));
+  border-color: color-mix(in srgb, var(--status-blocked-accent) 30%, var(--border-soft));
 }
 
 .current-push-card--in_progress {
@@ -3369,7 +4080,7 @@ body.sortable-dragging * {
 }
 
 .task-column__subsection--blocked {
-  border-bottom: 1px solid color-mix(in srgb, #7d8aff 18%, var(--border-soft));
+  border-bottom: 1px solid color-mix(in srgb, var(--status-blocked-accent) 18%, var(--border-soft));
   padding-bottom: 8px;
 }
 
@@ -3470,10 +4181,10 @@ body.sortable-dragging * {
 
 .task-row-blocked-pill {
   align-items: center;
-  background: color-mix(in srgb, #f59e0b 18%, var(--surface-base));
-  border: 1px solid color-mix(in srgb, #f59e0b 28%, transparent);
+  background: var(--status-blocked-bg);
+  border: 1px solid var(--status-blocked-border);
   border-radius: 999px;
-  color: color-mix(in srgb, #9a5c08 88%, var(--text-secondary));
+  color: var(--status-blocked-text);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 0.72rem;
@@ -4275,22 +4986,22 @@ body.sortable-dragging * {
 }
 
 .task-detail-pill--status-todo {
-  background: color-mix(in srgb, var(--lane-task) 18%, var(--surface-raised));
+  background: var(--status-todo-bg-raised);
   color: var(--status-todo-text);
 }
 
 .task-detail-pill--status-in_progress {
-  background: color-mix(in srgb, var(--lane-doing) 18%, var(--surface-raised));
+  background: var(--status-doing-bg-raised);
   color: var(--status-doing-text);
 }
 
 .task-detail-pill--status-blocked {
-  background: color-mix(in srgb, #f59e0b 18%, var(--surface-raised));
-  color: color-mix(in srgb, #9a5c08 88%, var(--text-secondary));
+  background: var(--status-blocked-bg-raised);
+  color: var(--status-blocked-text);
 }
 
 .task-detail-pill--status-done {
-  background: color-mix(in srgb, var(--lane-done) 18%, var(--surface-raised));
+  background: var(--status-done-bg-raised);
   color: var(--status-done-text);
 }
 
@@ -4351,22 +5062,22 @@ body.sortable-dragging * {
 }
 
 .task-detail-modal__meta-select--todo {
-  background: color-mix(in srgb, var(--lane-task) 18%, var(--surface-raised));
+  background: var(--status-todo-bg-raised);
   color: var(--status-todo-text);
 }
 
 .task-detail-modal__meta-select--in_progress {
-  background: color-mix(in srgb, var(--lane-doing) 18%, var(--surface-raised));
+  background: var(--status-doing-bg-raised);
   color: var(--status-doing-text);
 }
 
 .task-detail-modal__meta-select--blocked {
-  background: color-mix(in srgb, #7d8aff 16%, var(--surface-raised));
+  background: var(--status-blocked-bg-raised);
   color: var(--status-blocked-text);
 }
 
 .task-detail-modal__meta-select--done {
-  background: color-mix(in srgb, var(--lane-done) 18%, var(--surface-raised));
+  background: var(--status-done-bg-raised);
   color: var(--status-done-text);
 }
 
@@ -4635,22 +5346,22 @@ body.sortable-dragging * {
 }
 
 .status-pill--todo {
-  background: color-mix(in srgb, var(--lane-task) 22%, var(--surface-raised));
+  background: var(--status-todo-bg-raised);
   color: var(--status-todo-text);
 }
 
 .status-pill--in_progress {
-  background: color-mix(in srgb, var(--lane-doing) 22%, var(--surface-raised));
+  background: var(--status-doing-bg-raised);
   color: var(--status-doing-text);
 }
 
 .status-pill--blocked {
-  background: color-mix(in srgb, #7d8aff 18%, var(--surface-raised));
+  background: var(--status-blocked-bg-raised);
   color: var(--status-blocked-text);
 }
 
 .status-pill--done {
-  background: color-mix(in srgb, var(--lane-done) 22%, var(--surface-raised));
+  background: var(--status-done-bg-raised);
   color: var(--status-done-text);
 }
 
@@ -4963,6 +5674,44 @@ body.sortable-dragging * {
   display: grid;
   gap: 0;
   grid-template-columns: 1fr;
+}
+
+.settings-shortcut-note {
+  margin-top: 18px;
+}
+
+.settings-shortcut-panel {
+  align-items: center;
+  border-top: 1px solid var(--settings-border);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: var(--settings-setting-row);
+  padding: 12px 0 0;
+}
+
+.settings-shortcut-field {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(120px, 0.32fr) minmax(180px, 1fr);
+}
+
+.settings-shortcut-field span {
+  color: var(--text-secondary);
+  font-size: var(--settings-label-size);
+  font-weight: 700;
+}
+
+.settings-shortcut-field input {
+  cursor: pointer;
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  min-height: 36px;
+  text-transform: none;
+}
+
+.settings-shortcut-clear {
+  min-width: 74px;
 }
 
 .settings-color-card {
