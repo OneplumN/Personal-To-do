@@ -8,12 +8,12 @@
 
 最新版本可以在 GitHub Releases 下载：
 
-[yibu v0.1.0](https://github.com/OneplumN/yibu/releases/tag/v0.1.0)
+[yibu v0.1.1](https://github.com/OneplumN/yibu/releases/tag/v0.1.1)
 
 当前提供 macOS Apple Silicon 安装包：
 
 ```text
-yibu_0.1.0_aarch64.dmg
+yibu_0.1.1_aarch64.dmg
 ```
 
 ## 核心功能
@@ -67,7 +67,7 @@ npm run tauri:build
 
 ```text
 /tmp/yibu-tauri-target/release/bundle/macos/一步.app
-/tmp/yibu-tauri-target/release/bundle/dmg/一步_0.1.0_aarch64.dmg
+/tmp/yibu-tauri-target/release/bundle/dmg/一步_0.1.1_aarch64.dmg
 ```
 
 ## 常用命令

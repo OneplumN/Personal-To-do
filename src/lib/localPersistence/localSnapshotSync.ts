@@ -76,9 +76,6 @@ export function restoreLocalSnapshot() {
     try {
       if (hasSnapshotData(snapshotToRestore)) {
         await importSnapshot(snapshotToRestore);
-      } else {
-        const { demoSnapshot } = await import("../demo/demoSnapshot");
-        await importSnapshot(demoSnapshot);
       }
     } finally {
       isRestoringLocalSnapshot = false;
