@@ -120,7 +120,7 @@ src-tauri/
   src/          # Tauri 启动和 SQLite 逻辑
 ```
 
-设计方向见 [DESIGN.md](./DESIGN.md)。
+设计方向见 [docs/DESIGN.md](./docs/DESIGN.md)。
 
 ## 发布
 
