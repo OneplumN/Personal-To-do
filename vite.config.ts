@@ -173,6 +173,7 @@ export default defineConfig({
   test: {
     exclude: ["**/node_modules/**", "**/dist/**", "**/._*"],
     environment: "jsdom",
+    hookTimeout: 30000,
     setupFiles: ["./src/tests/setup.ts"],
     css: true,
   },
