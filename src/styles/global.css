@@ -3165,26 +3165,26 @@ body.sortable-dragging * {
 
 .dashboard-section--focus .focus-card {
   aspect-ratio: auto;
-  gap: 8px;
-  grid-template-rows: 58px minmax(118px, 1fr) 40px;
+  gap: 7px;
+  grid-template-rows: 54px minmax(128px, 1fr) 36px;
   height: auto;
   min-height: 260px;
   padding: 14px;
 }
 
 .dashboard-section--focus .focus-card__top {
-  height: 58px;
-  min-height: 58px;
+  height: 54px;
+  min-height: 54px;
 }
 
 .dashboard-section--focus .focus-card__footer,
 .dashboard-section--focus .focus-card__footer-meta {
-  min-height: 40px;
+  min-height: 36px;
 }
 
 .dashboard-section--focus .focus-card__tasklist {
   gap: 5px;
-  min-height: 118px;
+  min-height: 128px;
   padding: 10px 13px;
 }
 
@@ -4765,28 +4765,6 @@ body.sortable-dragging * {
   background: transparent;
   box-shadow: none;
   color: #e0443e;
-  outline: none;
-}
-
-.checklist-completed-toggle {
-  align-items: center;
-  background: color-mix(in srgb, var(--surface-muted) 46%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border-soft) 56%, transparent);
-  border-radius: 999px;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 0.78rem;
-  font-weight: 650;
-  justify-self: start;
-  margin-top: 2px;
-  padding: 6px 10px;
-}
-
-.checklist-completed-toggle:hover,
-.checklist-completed-toggle:focus-visible {
-  background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
-  color: var(--text-secondary);
   outline: none;
 }
 

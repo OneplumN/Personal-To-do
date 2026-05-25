@@ -107,7 +107,7 @@ describe("Today Step", () => {
     expect(item).toHaveTextContent("0/4");
     expect(item).toHaveTextContent("Check compact title");
     expect(item).toHaveTextContent("Verify action row");
-    expect(item).toHaveTextContent("还有 2 项未完成");
+    expect(item).not.toHaveTextContent("还有");
     expect(item).not.toHaveTextContent("Open main window");
     expect(screen.queryByText("Hidden backlog task")).not.toBeInTheDocument();
   });
@@ -201,10 +201,11 @@ describe("Today Step", () => {
     const item = await screen.findByRole("group", {
       name: "今日任务：Review hidden checklist items",
     });
+    expect(item).toHaveTextContent("1/6");
     expect(item).toHaveTextContent("First visible item");
     expect(item).toHaveTextContent("Second visible item");
-    expect(item).toHaveTextContent("还有 3 项未完成");
-    expect(item).toHaveTextContent("已完成 1 项");
+    expect(item).not.toHaveTextContent("还有");
+    expect(item).not.toHaveTextContent("已完成 1 项");
     expect(item).not.toHaveTextContent("Completed hidden item");
     expect(item).not.toHaveTextContent("Fourth hidden item");
   });

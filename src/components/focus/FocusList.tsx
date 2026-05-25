@@ -175,6 +175,7 @@ function FocusCard({
   onOpenTask,
   onRemoveTask,
   onUpdateStatus,
+  previewLimit,
 }: {
   dragMode: "dragging" | "idle" | "target";
   dropPosition: DropPosition;
@@ -185,11 +186,12 @@ function FocusCard({
   onOpenTask: (taskId: string) => void;
   onRemoveTask: (taskId: string) => void;
   onUpdateStatus: (taskId: string, status: "done") => void;
+  previewLimit: number;
 }) {
   const { task } = item;
   const glassTone = getGlassTone(task.id);
   const pendingTasklist = task.checklist.filter((checklistItem) => !checklistItem.done);
-  const tasklistPreview = pendingTasklist.slice(0, 3);
+  const tasklistPreview = pendingTasklist.slice(0, previewLimit);
   const completedTaskCount = task.checklist.length - pendingTasklist.length;
   const footerLabel =
     task.status === "blocked"
@@ -260,11 +262,6 @@ function FocusCard({
                   </li>
                 ))}
               </ol>
-              {pendingTasklist.length > tasklistPreview.length ? (
-                <span className="focus-card__tasklist-more">
-                  +{pendingTasklist.length - tasklistPreview.length}
-                </span>
-              ) : null}
             </>
           ) : (
             <div className="focus-card__tasklist-empty">
@@ -326,6 +323,7 @@ export function FocusList({
   onRemoveTask,
   onReorder,
   onUpdateStatus,
+  previewLimit = 3,
 }: {
   items: FocusListItem[];
   onChangePriority: (taskId: string, priority: TaskPriority) => void;
@@ -333,6 +331,7 @@ export function FocusList({
   onRemoveTask: (taskId: string) => void;
   onReorder: (taskId: string, toIndex: number) => void;
   onUpdateStatus: (taskId: string, status: "done") => void;
+  previewLimit?: number;
 }) {
   const { beginDrag, dragState } = useSortableCards({
     onReorder: (draggedId, targetId, position) => {
@@ -375,6 +374,7 @@ export function FocusList({
           onOpenTask={onOpenTask}
           onRemoveTask={onRemoveTask}
           onUpdateStatus={onUpdateStatus}
+          previewLimit={previewLimit}
         />
       ))}
     </div>

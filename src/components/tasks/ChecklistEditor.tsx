@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChecklistItem, Task } from "../../types/task";
 
 function ConfirmIcon() {
@@ -49,7 +49,6 @@ export function ChecklistEditor({
   const [editingText, setEditingText] = useState("");
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
-  const [showCompletedItems, setShowCompletedItems] = useState(false);
   const pointerDragRef = useRef<{
     active: boolean;
     itemId: string;
@@ -65,22 +64,6 @@ export function ChecklistEditor({
       inputRef.current?.focus();
     }
   }, [isAdding]);
-
-  const pendingItems = useMemo(
-    () => task.checklist.filter((item) => !item.done),
-    [task.checklist],
-  );
-  const completedItems = useMemo(
-    () => task.checklist.filter((item) => item.done),
-    [task.checklist],
-  );
-  const visibleItems = showCompletedItems ? [...pendingItems, ...completedItems] : pendingItems;
-
-  useEffect(() => {
-    if (completedItems.length === 0) {
-      setShowCompletedItems(false);
-    }
-  }, [completedItems.length]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -228,10 +211,10 @@ export function ChecklistEditor({
         </form>
       ) : null}
       <div className="checklist checklist--compact">
-        {visibleItems.length === 0 && completedItems.length > 0 ? (
-          <p className="checklist__empty">未完成清单已清空。</p>
+        {task.checklist.length === 0 ? (
+          <p className="checklist__empty">暂无清单。</p>
         ) : null}
-        {visibleItems.map((item) => (
+        {task.checklist.map((item) => (
           <div
             className={
               draggedItemId === item.id
@@ -347,15 +330,6 @@ export function ChecklistEditor({
             </div>
           </div>
         ))}
-        {completedItems.length > 0 ? (
-          <button
-            className="checklist-completed-toggle"
-            onClick={() => setShowCompletedItems((current) => !current)}
-            type="button"
-          >
-            {showCompletedItems ? "收起已完成" : `已完成 ${completedItems.length} 项`}
-          </button>
-        ) : null}
       </div>
     </section>
   );

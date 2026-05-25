@@ -43,6 +43,28 @@ describe("Project workspace", () => {
       },
       "2026-04-23T08:10:00.000Z",
     );
+    const urgentTodoTask = {
+      ...createTask(
+        {
+          body: "必须先处理的任务。",
+          projectId: project.id,
+          title: "紧急任务排序",
+        },
+        "2026-04-23T08:05:00.000Z",
+      ),
+      priority: "urgent" as const,
+    };
+    const importantTodoTask = {
+      ...createTask(
+        {
+          body: "排在普通任务之前。",
+          projectId: project.id,
+          title: "重要任务排序",
+        },
+        "2026-04-23T08:04:00.000Z",
+      ),
+      priority: "important" as const,
+    };
     const blockedTask = {
       ...createTask(
         {
@@ -81,6 +103,8 @@ describe("Project workspace", () => {
     await projectRepository.save(project);
     await projectRepository.save(sideProject);
     await taskRepository.save(todoTask);
+    await taskRepository.save(urgentTodoTask);
+    await taskRepository.save(importantTodoTask);
     await taskRepository.save(blockedTask);
     await taskRepository.save(inProgressTask);
     await taskRepository.save(doneTask);
@@ -101,7 +125,7 @@ describe("Project workspace", () => {
     const activeProjectCard = container.querySelector(".project-sidebar__item--active");
     expect(activeProjectCard).not.toBeNull();
     expect(activeProjectCard).toHaveTextContent("Project Beta");
-    expect(activeProjectCard).toHaveTextContent("1/4");
+    expect(activeProjectCard).toHaveTextContent("1/6");
     expect(activeProjectCard).not.toHaveTextContent("原始项目笔记");
     expect(screen.getByRole("button", { name: "新建任务" })).toBeInTheDocument();
     expect(within(projectNav).getByRole("button", { name: "Project Beta" })).toBeInTheDocument();
@@ -133,6 +157,11 @@ describe("Project workspace", () => {
 
     const todoColumn = screen.getByRole("heading", { level: 3, name: "待做" }).closest("section");
     expect(todoColumn).not.toBeNull();
+    expect(
+      Array.from((todoColumn as HTMLElement).querySelectorAll(".task-board-item h4")).map(
+        (heading) => heading.textContent,
+      ),
+    ).toEqual(["紧急任务排序", "重要任务排序", "准备任务列表"]);
     const todoRow = within(todoColumn as HTMLElement)
       .getByText("准备任务列表")
       .closest(".task-board-item");

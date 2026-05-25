@@ -207,6 +207,7 @@ export function HomePage() {
           onUpdateStatus={(taskId) => {
             handleQuickStatus(taskId, "done");
           }}
+          previewLimit={3}
         />
       </section>
 

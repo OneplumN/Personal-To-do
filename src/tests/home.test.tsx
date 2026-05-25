@@ -117,7 +117,7 @@ describe("Home dashboard", () => {
     expect(focusWithin.getByText("确认任务详情结构")).toBeInTheDocument();
     expect(focusWithin.queryByText("补充回归测试")).not.toBeInTheDocument();
     expect(focusWithin.getByText("0/4")).toBeInTheDocument();
-    expect(focusWithin.getByText("+1")).toBeInTheDocument();
+    expect(focusWithin.queryByText("+1")).not.toBeInTheDocument();
     const priorityButton = focusWithin.getByRole("button", { name: "修改优先级：重要" });
     expect(priorityButton).toBeInTheDocument();
     const editButton = focusWithin.getByRole("button", { name: "编辑" });

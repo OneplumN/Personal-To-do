@@ -223,6 +223,29 @@ function getChecklistSummary(task: Task) {
   return `清单 ${checklistDone}/${task.checklist.length}`;
 }
 
+const PRIORITY_RANK: Record<TaskPriority, number> = {
+  urgent: 0,
+  important: 1,
+  normal: 2,
+};
+
+function getTaskSortTimestamp(task: Task) {
+  return task.completionWrapUp?.completedAt ?? task.updatedAt;
+}
+
+function compareActiveTasks(left: Task, right: Task) {
+  const priorityDiff = PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+  if (priorityDiff !== 0) {
+    return priorityDiff;
+  }
+
+  return getTaskSortTimestamp(right).localeCompare(getTaskSortTimestamp(left));
+}
+
+function compareCompletedTasks(left: Task, right: Task) {
+  return getTaskSortTimestamp(right).localeCompare(getTaskSortTimestamp(left));
+}
+
 function TaskBoardRow({
   inFocus,
   onChangePriority,
@@ -336,11 +359,11 @@ export function TaskBoardView({
   onUpdateStatus: (taskId: string, status: TaskStatus) => void;
   tasks: Task[];
 }) {
-  const todoTasks = tasks.filter((task) => task.status === "todo");
-  const inProgressTasks = tasks.filter(
-    (task) => task.status === "in_progress" || task.status === "blocked",
-  );
-  const doneTasks = tasks.filter((task) => task.status === "done");
+  const todoTasks = tasks.filter((task) => task.status === "todo").sort(compareActiveTasks);
+  const inProgressTasks = tasks
+    .filter((task) => task.status === "in_progress" || task.status === "blocked")
+    .sort(compareActiveTasks);
+  const doneTasks = tasks.filter((task) => task.status === "done").sort(compareCompletedTasks);
 
   const columns = [
     {

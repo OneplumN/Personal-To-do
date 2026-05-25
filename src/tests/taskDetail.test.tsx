@@ -124,7 +124,7 @@ describe("Task detail", () => {
     });
   });
 
-  test("keeps completed checklist items folded below active work", async () => {
+  test("shows completed checklist items inline with strike-through", async () => {
     const project = createProject({ name: "Project Folded" });
     const completedItem = { ...createChecklistItem("已经完成的长清单"), done: true };
     const pendingItem = createChecklistItem("仍需处理的清单");
@@ -138,12 +138,12 @@ describe("Task detail", () => {
     useProjectStore.setState({ isLoaded: true, projects: [project] });
     useTaskStore.setState({ isLoaded: true, tasks: [task] });
 
-    const user = userEvent.setup();
     renderWithRouter(<TaskDetailPanel onClose={vi.fn()} project={project} taskId={task.id} />);
 
     expect(screen.getByText("仍需处理的清单")).toBeInTheDocument();
-    expect(screen.queryByText("已经完成的长清单")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "已完成 1 项" }));
-    expect(screen.getByText("已经完成的长清单")).toBeInTheDocument();
+    const completedText = screen.getByText("已经完成的长清单");
+    expect(completedText).toBeInTheDocument();
+    expect(completedText).toHaveClass("checklist-row__text--done");
+    expect(screen.queryByRole("button", { name: "已完成 1 项" })).not.toBeInTheDocument();
   });
 });
