@@ -248,7 +248,7 @@ describe("Project workspace", () => {
       ).toBeUndefined();
     });
     expect(screen.queryByText("补充任务入口")).not.toBeInTheDocument();
-    expect(screen.getByText("任务已删除")).toBeInTheDocument();
+    expect(await screen.findByText("任务已删除")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "撤回" }));
     await waitFor(() => {
       expect(
