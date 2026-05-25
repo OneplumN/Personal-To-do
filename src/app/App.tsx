@@ -9,7 +9,7 @@ import { ReportCenterPage } from "../features/reports/ReportCenterPage";
 import { TodayStepHandlePage } from "../features/todayStep/TodayStepHandlePage";
 import { TodayStepPage } from "../features/todayStep/TodayStepPage";
 import { useAppBootstrap } from "./useAppBootstrap";
-import { useEffect, useMemo, type PointerEvent } from "react";
+import { useEffect, useMemo, useState, type PointerEvent } from "react";
 import { useDesktopShortcuts } from "../lib/desktop/useDesktopShortcuts";
 import { isTauriRuntime } from "../lib/platform/runtime";
 import {
@@ -51,22 +51,63 @@ function WindowModeIcon({ direction }: { direction: "enter" | "exit" }) {
   );
 }
 
+function formatTodayLabel(date: Date) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function getMsUntilNextLocalDay(date = new Date()) {
+  const nextDay = new Date(date);
+  nextDay.setHours(24, 0, 0, 0);
+  return Math.max(1000, nextDay.getTime() - date.getTime() + 1000);
+}
+
+function useTodayLabel() {
+  const [todayLabel, setTodayLabel] = useState(() => formatTodayLabel(new Date()));
+
+  useEffect(() => {
+    function refreshTodayLabel() {
+      setTodayLabel(formatTodayLabel(new Date()));
+    }
+
+    let timeoutId = window.setTimeout(refreshTodayLabel, getMsUntilNextLocalDay());
+
+    function scheduleNextRefresh() {
+      window.clearTimeout(timeoutId);
+      refreshTodayLabel();
+      timeoutId = window.setTimeout(refreshTodayLabel, getMsUntilNextLocalDay());
+    }
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        scheduleNextRefresh();
+      }
+    }
+
+    window.addEventListener("focus", scheduleNextRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("focus", scheduleNextRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  return todayLabel;
+}
+
 export function App() {
   const { ready } = useAppBootstrap();
   const location = useLocation();
   const navigate = useNavigate();
   const preferences = usePreferenceStore((state) => state.preferences);
   const savePreferences = usePreferenceStore((state) => state.savePreferences);
-  const todayLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat("zh-CN", {
-        day: "numeric",
-        month: "long",
-        weekday: "long",
-        year: "numeric",
-      }).format(new Date()),
-    [],
-  );
+  const todayLabel = useTodayLabel();
 
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;

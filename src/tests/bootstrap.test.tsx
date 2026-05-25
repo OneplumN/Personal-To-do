@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test } from "vitest";
-import { screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
 import { App } from "../app/App";
 import { demoSnapshot } from "../lib/demo/demoSnapshot";
 import { seedAppData } from "../lib/demo/seedAppData";
@@ -17,6 +17,7 @@ import { renderWithRouter } from "./test-utils";
 
 describe("App shell", () => {
   beforeEach(async () => {
+    vi.useRealTimers();
     await resetDatabase();
     useProjectStore.setState({ isLoaded: false, projects: [] });
     useTaskStore.setState({ isLoaded: false, tasks: [] });
@@ -26,6 +27,10 @@ describe("App shell", () => {
       isLoaded: false,
       preferences: usePreferenceStore.getState().preferences,
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test("renders primary navigation for Home, Projects, and Reports", async () => {
@@ -51,6 +56,20 @@ describe("App shell", () => {
     expect(
       await screen.findByRole("heading", { level: 2, name: "Today" }),
     ).toBeInTheDocument();
+  });
+
+  test("refreshes the header date when the app regains focus", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T23:59:00+08:00"));
+
+    renderWithRouter(<App />);
+
+    expect(screen.getByText("2026年5月18日星期一")).toBeInTheDocument();
+
+    vi.setSystemTime(new Date("2026-05-19T00:01:00+08:00"));
+    fireEvent.focus(window);
+
+    expect(screen.getByText("2026年5月19日星期二")).toBeInTheDocument();
   });
 
   test("provides a shared seed source for browser and automation", async () => {
