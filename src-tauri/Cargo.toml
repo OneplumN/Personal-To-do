@@ -1,6 +1,6 @@
 [package]
 name = "yibu"
-version = "0.1.2"
+version = "0.1.3"
 description = "一步 desktop app"
 authors = ["一步"]
 edition = "2021"
