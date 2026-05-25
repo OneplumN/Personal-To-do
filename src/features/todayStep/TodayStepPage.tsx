@@ -187,8 +187,10 @@ export function TodayStepPage() {
             const project = projectById.get(task.projectId);
             const progress = getChecklistProgress(task);
             const isBusy = busyTaskId === task.id;
-            const previewItems = task.checklist.slice(0, 2);
-            const hiddenChecklistCount = Math.max(0, task.checklist.length - previewItems.length);
+            const pendingChecklistItems = task.checklist.filter((item) => !item.done);
+            const completedChecklistCount = task.checklist.length - pendingChecklistItems.length;
+            const previewItems = pendingChecklistItems.slice(0, 2);
+            const hiddenPendingCount = Math.max(0, pendingChecklistItems.length - previewItems.length);
 
             return (
               <article
@@ -227,8 +229,14 @@ export function TodayStepPage() {
                         <span title={item.text}>{item.text}</span>
                       </li>
                     ))}
-                    {hiddenChecklistCount > 0 ? (
-                      <li className="today-step-checklist__more">还有 {hiddenChecklistCount} 项</li>
+                    {hiddenPendingCount > 0 ? (
+                      <li className="today-step-checklist__more">还有 {hiddenPendingCount} 项未完成</li>
+                    ) : null}
+                    {previewItems.length === 0 && completedChecklistCount > 0 ? (
+                      <li className="today-step-checklist__more">清单已完成</li>
+                    ) : null}
+                    {completedChecklistCount > 0 && previewItems.length > 0 ? (
+                      <li className="today-step-checklist__more">已完成 {completedChecklistCount} 项</li>
                     ) : null}
                   </ul>
                 ) : null}

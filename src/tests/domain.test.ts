@@ -19,7 +19,7 @@ import {
 describe("domain definitions", () => {
   test("exposes the approved task status order", () => {
     expect(TASK_STATUS_ORDER).toEqual(["todo", "in_progress", "blocked", "done"]);
-    expect(TASK_PRIORITY_ORDER).toEqual(["normal", "important", "urgent"]);
+    expect(TASK_PRIORITY_ORDER).toEqual(["urgent", "important", "normal"]);
   });
 
   test("creates default preferences with lane colors", () => {

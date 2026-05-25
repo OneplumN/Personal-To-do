@@ -3585,6 +3585,7 @@ body.sortable-dragging * {
   grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 46px;
   min-width: 248px;
+  max-width: min(380px, calc(100vw - 32px));
   overflow: hidden;
   padding: 11px 11px 12px 13px;
   pointer-events: auto;
@@ -4563,6 +4564,13 @@ body.sortable-dragging * {
   gap: 8px;
 }
 
+.checklist__empty {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  margin: 2px 0 0;
+  padding: 8px 2px;
+}
+
 .checklist-row {
   align-items: center;
   background: transparent;
@@ -4751,6 +4759,28 @@ body.sortable-dragging * {
   background: transparent;
   box-shadow: none;
   color: #e0443e;
+  outline: none;
+}
+
+.checklist-completed-toggle {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-muted) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 56%, transparent);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 650;
+  justify-self: start;
+  margin-top: 2px;
+  padding: 6px 10px;
+}
+
+.checklist-completed-toggle:hover,
+.checklist-completed-toggle:focus-visible {
+  background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
+  color: var(--text-secondary);
   outline: none;
 }
 

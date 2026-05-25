@@ -30,6 +30,14 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 const TOAST_DURATION_MS = 3000;
+const TOAST_MESSAGE_MAX_LENGTH = 42;
+
+function getToastPreview(message: string) {
+  const normalized = message.trim().replace(/\s+/g, " ");
+  return normalized.length > TOAST_MESSAGE_MAX_LENGTH
+    ? `${normalized.slice(0, TOAST_MESSAGE_MAX_LENGTH)}...`
+    : normalized;
+}
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -92,7 +100,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               </svg>
             </span>
             <div className="toast__content">
-              <span>{toast.message}</span>
+              <span title={toast.message}>{getToastPreview(toast.message)}</span>
               {toast.action ? (
                 <button
                   className="toast__action"

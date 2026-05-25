@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { resetDatabase } from "../lib/storage/db";
 import { useFocusStore } from "../features/focus/focusStore";
 import { useProjectStore } from "../features/projects/projectStore";
@@ -8,6 +8,7 @@ import { createEmptyDraft } from "../types/report";
 
 describe("zustand stores", () => {
   beforeEach(async () => {
+    vi.useRealTimers();
     await resetDatabase();
     useProjectStore.setState({ isLoaded: false, projects: [] });
     useTaskStore.setState({ isLoaded: false, tasks: [] });
@@ -84,6 +85,29 @@ describe("zustand stores", () => {
     expect(nextTask.checklist).toHaveLength(1);
     expect(nextTask.checklist[0]?.text).toBe("Second");
     expect(nextTask.notes).toBe("备注内容");
+  });
+
+  test("refreshes task updatedAt when toggling a checklist item", async () => {
+    const project = await useProjectStore.getState().createProject({
+      name: "Project Timestamp",
+    });
+    const task = await useTaskStore.getState().createTask({
+      projectId: project.id,
+      title: "Check timestamp",
+    });
+    await useTaskStore.getState().addChecklistItem(task.id, "Toggle me");
+    const beforeToggle = useTaskStore.getState().tasks[0];
+    const itemId = beforeToggle?.checklist[0]?.id;
+
+    await new Promise((resolve) => window.setTimeout(resolve, 5));
+    await useTaskStore.getState().toggleChecklistItem(task.id, itemId);
+
+    const nextTask = useTaskStore.getState().tasks[0];
+    expect(nextTask?.checklist[0]?.done).toBe(true);
+    expect(nextTask?.updatedAt).not.toBe(beforeToggle?.updatedAt);
+    expect(Date.parse(nextTask?.updatedAt ?? "")).toBeGreaterThanOrEqual(
+      Date.parse(beforeToggle?.updatedAt ?? ""),
+    );
   });
 
   test("saves and updates editable reports", async () => {

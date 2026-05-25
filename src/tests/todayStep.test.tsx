@@ -107,7 +107,7 @@ describe("Today Step", () => {
     expect(item).toHaveTextContent("0/4");
     expect(item).toHaveTextContent("Check compact title");
     expect(item).toHaveTextContent("Verify action row");
-    expect(item).toHaveTextContent("还有 2 项");
+    expect(item).toHaveTextContent("还有 2 项未完成");
     expect(item).not.toHaveTextContent("Open main window");
     expect(screen.queryByText("Hidden backlog task")).not.toBeInTheDocument();
   });
@@ -181,6 +181,7 @@ describe("Today Step", () => {
         "2026-05-12T11:05:00.000Z",
       ),
       checklist: [
+        { ...createChecklistItem("Completed hidden item"), done: true },
         createChecklistItem("First visible item"),
         createChecklistItem("Second visible item"),
         createChecklistItem("Third visible item"),
@@ -202,7 +203,9 @@ describe("Today Step", () => {
     });
     expect(item).toHaveTextContent("First visible item");
     expect(item).toHaveTextContent("Second visible item");
-    expect(item).toHaveTextContent("还有 3 项");
+    expect(item).toHaveTextContent("还有 3 项未完成");
+    expect(item).toHaveTextContent("已完成 1 项");
+    expect(item).not.toHaveTextContent("Completed hidden item");
     expect(item).not.toHaveTextContent("Fourth hidden item");
   });
 });

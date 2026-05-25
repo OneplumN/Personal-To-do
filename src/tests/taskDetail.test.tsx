@@ -9,7 +9,7 @@ import { useFocusStore } from "../features/focus/focusStore";
 import { useProjectStore } from "../features/projects/projectStore";
 import { useTaskStore } from "../features/tasks/taskStore";
 import { createProject } from "../types/project";
-import { createTask } from "../types/task";
+import { createChecklistItem, createTask } from "../types/task";
 import { renderWithRouter } from "./test-utils";
 
 describe("Task detail", () => {
@@ -122,5 +122,28 @@ describe("Task detail", () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test("keeps completed checklist items folded below active work", async () => {
+    const project = createProject({ name: "Project Folded" });
+    const completedItem = { ...createChecklistItem("已经完成的长清单"), done: true };
+    const pendingItem = createChecklistItem("仍需处理的清单");
+    const task = {
+      ...createTask({ projectId: project.id, title: "整理清单显示" }),
+      checklist: [completedItem, pendingItem],
+    };
+
+    await projectRepository.save(project);
+    await taskRepository.save(task);
+    useProjectStore.setState({ isLoaded: true, projects: [project] });
+    useTaskStore.setState({ isLoaded: true, tasks: [task] });
+
+    const user = userEvent.setup();
+    renderWithRouter(<TaskDetailPanel onClose={vi.fn()} project={project} taskId={task.id} />);
+
+    expect(screen.getByText("仍需处理的清单")).toBeInTheDocument();
+    expect(screen.queryByText("已经完成的长清单")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "已完成 1 项" }));
+    expect(screen.getByText("已经完成的长清单")).toBeInTheDocument();
   });
 });

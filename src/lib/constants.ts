@@ -22,9 +22,9 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 export const TASK_PRIORITY_ORDER: TaskPriority[] = [
-  "normal",
-  "important",
   "urgent",
+  "important",
+  "normal",
 ];
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
