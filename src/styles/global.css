@@ -1202,7 +1202,7 @@ textarea::placeholder {
   gap: 18px;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
   height: 100%;
-  min-height: 0;
+  min-height: 560px;
   overflow: hidden;
 }
 
@@ -3151,7 +3151,7 @@ body.sortable-dragging * {
 
 .dashboard-section--focus .focus-list--cards {
   align-content: start;
-  grid-auto-rows: minmax(260px, auto);
+  grid-auto-rows: 260px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   height: 100%;
   max-height: 100%;
@@ -3166,8 +3166,8 @@ body.sortable-dragging * {
 .dashboard-section--focus .focus-card {
   aspect-ratio: auto;
   gap: 10px;
-  grid-template-rows: 60px minmax(88px, 1fr) 44px;
-  height: 100%;
+  grid-template-rows: 60px minmax(104px, 1fr) 44px;
+  height: auto;
   min-height: 260px;
   padding: 14px;
 }
@@ -3184,7 +3184,7 @@ body.sortable-dragging * {
 
 .dashboard-section--focus .focus-card__tasklist {
   gap: 6px;
-  min-height: 0;
+  min-height: 104px;
   padding: 11px 13px;
 }
 
