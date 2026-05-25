@@ -59,17 +59,25 @@ describe("App shell", () => {
   });
 
   test("refreshes the header date when the app regains focus", async () => {
+    const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+      day: "numeric",
+      month: "long",
+      weekday: "long",
+      year: "numeric",
+    });
+    const firstDate = new Date(2026, 4, 18, 23, 59);
+    const nextDate = new Date(2026, 4, 19, 0, 1);
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-18T23:59:00+08:00"));
+    vi.setSystemTime(firstDate);
 
     renderWithRouter(<App />);
 
-    expect(screen.getByText("2026年5月18日星期一")).toBeInTheDocument();
+    expect(screen.getByText(dateFormatter.format(firstDate))).toBeInTheDocument();
 
-    vi.setSystemTime(new Date("2026-05-19T00:01:00+08:00"));
+    vi.setSystemTime(nextDate);
     fireEvent.focus(window);
 
-    expect(screen.getByText("2026年5月19日星期二")).toBeInTheDocument();
+    expect(screen.getByText(dateFormatter.format(nextDate))).toBeInTheDocument();
   });
 
   test("provides a shared seed source for browser and automation", async () => {
